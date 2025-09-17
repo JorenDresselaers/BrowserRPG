@@ -17,10 +17,8 @@
     player: null,
     currentScreen: 'exploration',
     selected: {
-      zoneId: null,
       dungeonId: null,
       enemyId: null,
-      npcZoneId: null,
       npcId: null,
       merchantId: null,
       professionId: null,
@@ -28,7 +26,17 @@
     },
     combat: {
       enemyId: null,
-      context: null
+      context: null,
+      active: false,
+      turn: null,
+      enemyHealth: 0,
+      playerHealth: 0,
+      playerMana: 0,
+      guard: false,
+      log: []
+    },
+    travel: {
+      destinationZoneId: null
     },
     logs: []
   };
@@ -64,7 +72,14 @@
     inventoryList: document.getElementById('inventoryList'),
     questLogPanel: document.getElementById('questLogPanel'),
     questLogContent: document.getElementById('questLogContent'),
-    explorationZoneSelect: document.getElementById('explorationZoneSelect'),
+    travelCurrentZone: document.getElementById('travelCurrentZone'),
+    travelDestinationSelect: document.getElementById('travelDestinationSelect'),
+    travelDestinationDescription: document.getElementById('travelDestinationDescription'),
+    travelDestinationMeta: document.getElementById('travelDestinationMeta'),
+    travelDestinationHighlights: document.getElementById('travelDestinationHighlights'),
+    travelDestinationThreats: document.getElementById('travelDestinationThreats'),
+    beginTravelButton: document.getElementById('beginTravelButton'),
+    explorationCurrentZone: document.getElementById('explorationCurrentZone'),
     explorationZoneDescription: document.getElementById('explorationZoneDescription'),
     explorationZoneDetails: document.getElementById('explorationZoneDetails'),
     explorationNPCs: document.getElementById('explorationNPCs'),
@@ -79,16 +94,24 @@
     dungeonEffects: document.getElementById('dungeonEffects'),
     dungeonRewards: document.getElementById('dungeonRewards'),
     startDungeonButton: document.getElementById('startDungeonButton'),
-    combatZoneSelect: document.getElementById('combatZoneSelect'),
+    combatCurrentZone: document.getElementById('combatCurrentZone'),
     combatEnemySelect: document.getElementById('combatEnemySelect'),
     engageCombatButton: document.getElementById('engageCombatButton'),
     autoSelectEnemy: document.getElementById('autoSelectEnemy'),
     enemyDetails: document.getElementById('enemyDetails'),
-    npcZoneSelect: document.getElementById('npcZoneSelect'),
+    combatActions: document.getElementById('combatActions'),
+    combatStrikeButton: document.getElementById('combatStrikeButton'),
+    combatAbilityButton: document.getElementById('combatAbilityButton'),
+    combatGuardButton: document.getElementById('combatGuardButton'),
+    combatFleeButton: document.getElementById('combatFleeButton'),
+    combatStatus: document.getElementById('combatStatus'),
+    combatLog: document.getElementById('combatLog'),
+    npcCurrentZone: document.getElementById('npcCurrentZone'),
     npcSelect: document.getElementById('npcSelect'),
     npcDetails: document.getElementById('npcDetails'),
     talkToNpcButton: document.getElementById('talkToNpcButton'),
     requestQuestButton: document.getElementById('requestQuestButton'),
+    tradingCurrentZone: document.getElementById('tradingCurrentZone'),
     merchantSelect: document.getElementById('merchantSelect'),
     merchantInfo: document.getElementById('merchantInfo'),
     merchantInventory: document.getElementById('merchantInventory'),
@@ -115,6 +138,7 @@
   };
 
   const screenRenderers = {
+    travel: renderTravelScreen,
     exploration: renderExplorationScreen,
     dungeons: renderDungeonScreen,
     combat: renderCombatScreen,
@@ -175,6 +199,7 @@
     setupNewGameForm();
     setupNavigation();
     setupOverlays();
+    setupTravelControls();
     setupExplorationControls();
     setupDungeonControls();
     setupCombatControls();
@@ -241,6 +266,7 @@
       return;
     }
     state.player = createPlayer(name, classId);
+    state.travel.destinationZoneId = state.player.location.zoneId;
     elements.newGameModal.classList.add('hidden');
     addLog(`Welcome, ${state.player.name} the ${getClass(classId).name}!`, logTypes.SUCCESS);
     updateAllUI();
@@ -270,6 +296,9 @@
         health: classData.stats.health,
         mana: classData.stats.mana
       },
+      location: {
+        zoneId: data.zones[0]?.id || null
+      },
       professions: [...(classData.startingProfessions || [])],
       quests: {
         active: [],
@@ -292,9 +321,21 @@
   function setupNavigation() {
     elements.activityTabs.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-screen]');
-      if (!button) return;
+      if (!button || button.disabled) return;
       showScreen(button.dataset.screen);
     });
+    updateNavigationLocks();
+  }
+
+  function updateNavigationLocks() {
+    const inCombat = state.combat.active;
+    elements.activityTabs
+      .querySelectorAll('button[data-screen]')
+      .forEach((button) => {
+        const locked = inCombat && button.dataset.screen !== 'combat';
+        button.disabled = locked;
+        button.classList.toggle('locked', locked);
+      });
   }
 
   function setupOverlays() {
@@ -334,11 +375,17 @@
     });
   }
 
-  function setupExplorationControls() {
-    elements.explorationZoneSelect.addEventListener('change', () => {
-      state.selected.zoneId = elements.explorationZoneSelect.value;
-      renderExplorationScreen();
+  function setupTravelControls() {
+    elements.travelDestinationSelect?.addEventListener('change', () => {
+      state.travel.destinationZoneId = elements.travelDestinationSelect.value;
+      renderTravelDestination(state.travel.destinationZoneId);
     });
+    elements.beginTravelButton?.addEventListener('click', () => {
+      performTravel();
+    });
+  }
+
+  function setupExplorationControls() {
     elements.exploreZoneButton.addEventListener('click', exploreZone);
     elements.scoutZoneButton.addEventListener('click', scoutZone);
   }
@@ -352,10 +399,6 @@
   }
 
   function setupCombatControls() {
-    elements.combatZoneSelect.addEventListener('change', () => {
-      state.selected.zoneId = elements.combatZoneSelect.value;
-      populateCombatEnemies();
-    });
     elements.combatEnemySelect.addEventListener('change', () => {
       state.selected.enemyId = elements.combatEnemySelect.value;
       renderEnemyDetails(state.selected.enemyId);
@@ -365,10 +408,12 @@
         addLog('Select an enemy to engage in combat.', logTypes.WARNING);
         return;
       }
-      simulateCombat(state.selected.enemyId);
+      if (!ensureCanAct('start another combat')) return;
+      enterCombat(state.selected.enemyId);
     });
     elements.autoSelectEnemy.addEventListener('click', () => {
-      const zone = getZone(state.selected.zoneId) || data.zones[0];
+      if (!ensureCanAct('seek a new foe')) return;
+      const zone = getCurrentZone();
       if (!zone) return;
       const randomEnemy = sample(zone.enemyIds);
       if (!randomEnemy) {
@@ -380,13 +425,13 @@
       renderEnemyDetails(randomEnemy);
       addLog(`A roaming ${getEnemy(randomEnemy).name} crosses your path.`, logTypes.INFO);
     });
+    elements.combatStrikeButton?.addEventListener('click', () => takeCombatAction('strike'));
+    elements.combatAbilityButton?.addEventListener('click', () => takeCombatAction('ability'));
+    elements.combatGuardButton?.addEventListener('click', () => takeCombatAction('guard'));
+    elements.combatFleeButton?.addEventListener('click', () => takeCombatAction('flee'));
   }
 
   function setupNpcControls() {
-    elements.npcZoneSelect.addEventListener('change', () => {
-      state.selected.npcZoneId = elements.npcZoneSelect.value;
-      populateNpcsForZone();
-    });
     elements.npcSelect.addEventListener('change', () => {
       state.selected.npcId = elements.npcSelect.value;
       renderNpcDetails(state.selected.npcId);
@@ -397,10 +442,15 @@
 
   function setupTradingControls() {
     elements.merchantSelect.addEventListener('change', () => {
+      if (!ensureCanAct('trade during combat')) {
+        elements.merchantSelect.value = state.selected.merchantId || '';
+        return;
+      }
       state.selected.merchantId = elements.merchantSelect.value;
       renderTradingScreen();
     });
     elements.refreshMerchantButton.addEventListener('click', () => {
+      if (!ensureCanAct('negotiate with merchants')) return;
       if (!state.selected.merchantId) return;
       addLog('The merchant refreshes their stock with new wares.', logTypes.INFO);
       renderTradingScreen(true);
@@ -432,6 +482,10 @@
   }
 
   function showScreen(screenId) {
+    if (state.combat.active && screenId !== 'combat') {
+      addLog('You are locked in combat and cannot switch activities.', logTypes.WARNING);
+      return;
+    }
     if (!screenRenderers[screenId]) return;
     state.currentScreen = screenId;
     elements.activityTabs.querySelectorAll('button').forEach((button) => {
@@ -441,12 +495,14 @@
       screen.classList.toggle('active', screen.id === `screen-${screenId}`);
     });
     screenRenderers[screenId]();
+    updateNavigationLocks();
   }
 
   function updateAllUI() {
     if (!state.player) return;
     syncResourceCaps(state.player);
     updatePlayerPanel();
+    renderTravelScreen();
     renderExplorationScreen();
     renderDungeonScreen();
     renderCombatScreen();
@@ -539,12 +595,94 @@
       .join('');
   }
 
+  function renderTravelScreen() {
+    populateTravelDestinations();
+    const currentZone = getCurrentZone();
+    if (elements.travelCurrentZone) {
+      elements.travelCurrentZone.textContent = currentZone?.name || 'Uncharted Wilds';
+    }
+    if (!state.travel.destinationZoneId || !getZone(state.travel.destinationZoneId)) {
+      state.travel.destinationZoneId = currentZone?.id || data.zones[0]?.id || null;
+    }
+    if (elements.travelDestinationSelect && state.travel.destinationZoneId) {
+      elements.travelDestinationSelect.value = state.travel.destinationZoneId;
+    }
+    renderTravelDestination(state.travel.destinationZoneId);
+    if (elements.beginTravelButton) {
+      elements.beginTravelButton.disabled = state.combat.active;
+    }
+  }
+
+  function populateTravelDestinations() {
+    if (!elements.travelDestinationSelect || !data.zones.length) return;
+    const options = data.zones.map((zone) => `<option value=\"${zone.id}\">${zone.name}</option>`).join('');
+    elements.travelDestinationSelect.innerHTML = options;
+  }
+
+  function renderTravelDestination(zoneId) {
+    if (!elements.travelDestinationDescription) return;
+    const destination = getZone(zoneId);
+    if (!destination) {
+      elements.travelDestinationDescription.textContent = 'Select a destination to review travel notes.';
+      if (elements.travelDestinationMeta) {
+        elements.travelDestinationMeta.innerHTML = '';
+      }
+      if (elements.travelDestinationHighlights) {
+        elements.travelDestinationHighlights.innerHTML = '';
+      }
+      if (elements.travelDestinationThreats) {
+        elements.travelDestinationThreats.innerHTML = '';
+      }
+      return;
+    }
+    if (elements.travelDestinationSelect) {
+      elements.travelDestinationSelect.value = destination.id;
+    }
+    elements.travelDestinationDescription.textContent = destination.description;
+    const [minLevel, maxLevel] = destination.levelRange || ['?', '?'];
+    if (elements.travelDestinationMeta) {
+      elements.travelDestinationMeta.innerHTML = `
+        <li>Climate: ${destination.climate || 'Unknown'}</li>
+        <li>Level Range: ${minLevel} - ${maxLevel}</li>
+      `;
+    }
+    if (elements.travelDestinationHighlights) {
+      elements.travelDestinationHighlights.innerHTML = (destination.pointsOfInterest || [])
+        .map((poi) => `<li>${poi}</li>`)
+        .join('') || '<li>No notable landmarks recorded.</li>';
+    }
+    if (elements.travelDestinationThreats) {
+      elements.travelDestinationThreats.innerHTML = (destination.enemyIds || [])
+        .map((enemyId) => `<li>${getEnemy(enemyId)?.name || enemyId}</li>`)
+        .join('') || '<li>No known threats.</li>';
+    }
+  }
+
+  function performTravel() {
+    if (!state.player) return;
+    if (!ensureCanAct('travel')) return;
+    const destinationId = elements.travelDestinationSelect?.value || state.travel.destinationZoneId;
+    const destination = getZone(destinationId);
+    if (!destination) {
+      addLog('Select a valid destination before travelling.', logTypes.WARNING);
+      return;
+    }
+    const currentZone = getCurrentZone();
+    if (currentZone?.id === destination.id) {
+      addLog('You are already stationed in that zone.', logTypes.INFO);
+      return;
+    }
+    state.player.location.zoneId = destination.id;
+    state.travel.destinationZoneId = destination.id;
+    state.selected.enemyId = null;
+    addLog(`You travel to ${destination.name}.`, logTypes.SUCCESS);
+    updateAllUI();
+  }
+
   function renderExplorationScreen() {
-    populateZoneSelect(elements.explorationZoneSelect);
-    const zone = getZone(state.selected.zoneId) || data.zones[0];
+    const zone = getCurrentZone();
     if (!zone) return;
-    state.selected.zoneId = zone.id;
-    elements.explorationZoneSelect.value = zone.id;
+    elements.explorationCurrentZone.textContent = zone.name;
     elements.explorationZoneDescription.textContent = zone.description;
     elements.explorationZoneDetails.innerHTML = `
       <li>Climate: ${zone.climate}</li>
@@ -561,18 +699,10 @@
       .join('') || '<li>No gatherable resources.</li>';
   }
 
-  function populateZoneSelect(selectElement) {
-    if (!selectElement || !data.zones.length) return;
-    const options = data.zones.map((zone) => `<option value=\"${zone.id}\">${zone.name}</option>`).join('');
-    selectElement.innerHTML = options;
-    if (!state.selected.zoneId) {
-      state.selected.zoneId = data.zones[0]?.id || null;
-    }
-  }
-
   function exploreZone() {
     if (!state.player) return;
-    const zone = getZone(state.selected.zoneId);
+    if (!ensureCanAct('explore new areas')) return;
+    const zone = getCurrentZone();
     if (!zone) return;
     if (state.player.resources.health <= 0) {
       addLog('You are too wounded to explore. Rest first.', logTypes.WARNING);
@@ -582,7 +712,7 @@
     if (roll < 0.45 && zone.enemyIds?.length) {
       const enemyId = sample(zone.enemyIds);
       addLog(`You encounter a ${getEnemy(enemyId).name}!`, logTypes.WARNING);
-      startCombat(enemyId, { zoneId: zone.id });
+      enterCombat(enemyId, { zoneId: zone.id });
     } else if (roll < 0.7 && zone.gatherables?.length) {
       const gatheredItem = sample(zone.gatherables);
       const amount = Math.random() < 0.3 ? 2 : 1;
@@ -601,7 +731,8 @@
   }
 
   function scoutZone() {
-    const zone = getZone(state.selected.zoneId);
+    if (!ensureCanAct('scout while in battle')) return;
+    const zone = getCurrentZone();
     if (!zone) return;
     const enemies = (zone.enemyIds || []).map((id) => getEnemy(id)?.name || id).join(', ');
     const dungeonNames = (zone.dungeonIds || []).map((id) => getDungeon(id)?.name || id).join(', ');
@@ -612,11 +743,16 @@
   }
 
   function renderDungeonScreen() {
-    populateDungeonSelect();
-    const dungeon = getDungeon(state.selected.dungeonId) || data.dungeons[0];
-    if (!dungeon) return;
-    state.selected.dungeonId = dungeon.id;
-    elements.dungeonSelect.value = dungeon.id;
+    const dungeons = populateDungeonSelect();
+    const dungeon = dungeons.find((entry) => entry.id === state.selected.dungeonId);
+    if (!dungeon) {
+      elements.dungeonDescription.textContent = 'No dungeons have been mapped in this region.';
+      elements.dungeonObjectives.innerHTML = '';
+      elements.dungeonEncounters.innerHTML = '';
+      elements.dungeonEffects.innerHTML = '';
+      elements.dungeonRewards.innerHTML = '';
+      return;
+    }
     elements.dungeonDescription.textContent = dungeon.description;
     elements.dungeonObjectives.innerHTML = (dungeon.objectives || [])
       .map((objective) => `<li>${objective}</li>`)
@@ -634,53 +770,63 @@
     `;
   }
   function populateDungeonSelect() {
-    if (!data.dungeons.length) {
+    const zone = getCurrentZone();
+    const dungeons = data.dungeons.filter((dungeon) => dungeon.zoneId === zone?.id);
+    if (!dungeons.length) {
       elements.dungeonSelect.innerHTML = '<option>No dungeons discovered</option>';
-      return;
+      state.selected.dungeonId = null;
+      return [];
     }
-    elements.dungeonSelect.innerHTML = data.dungeons
+    elements.dungeonSelect.innerHTML = dungeons
       .map((dungeon) => `<option value=\"${dungeon.id}\">${dungeon.name}</option>`)
       .join('');
-    if (!state.selected.dungeonId) {
-      state.selected.dungeonId = data.dungeons[0].id;
+    if (!state.selected.dungeonId || !dungeons.some((d) => d.id === state.selected.dungeonId)) {
+      state.selected.dungeonId = dungeons[0].id;
     }
+    elements.dungeonSelect.value = state.selected.dungeonId;
+    return dungeons;
   }
 
   function startDungeonRun() {
     if (!state.player) return;
     const dungeon = getDungeon(state.selected.dungeonId);
-    if (!dungeon) return;
+    if (!dungeon) {
+      addLog('There is no dungeon expedition available in this zone.', logTypes.INFO);
+      return;
+    }
+    if (!ensureCanAct('delve into a dungeon')) return;
     addLog(`You delve into the ${dungeon.name}.`, logTypes.INFO);
     const encounters = [...(dungeon.encounterIds || [])];
     if (dungeon.bossId) encounters.push(dungeon.bossId);
     const enemyId = sample(encounters);
-    startCombat(enemyId, { dungeonId: dungeon.id, boss: enemyId === dungeon.bossId });
+    enterCombat(enemyId, { dungeonId: dungeon.id, boss: enemyId === dungeon.bossId });
   }
 
   function renderCombatScreen() {
-    populateZoneSelect(elements.combatZoneSelect);
-    const zone = getZone(state.selected.zoneId) || data.zones[0];
-    if (!zone) return;
-    elements.combatZoneSelect.value = zone.id;
+    const zone = getCurrentZone();
+    if (elements.combatCurrentZone) {
+      elements.combatCurrentZone.textContent = zone?.name || 'Unknown';
+    }
     populateCombatEnemies();
     renderEnemyDetails(state.selected.enemyId);
+    renderCombatState();
   }
 
   function populateCombatEnemies() {
-    const zone = getZone(state.selected.zoneId);
-    if (!zone) {
-      elements.combatEnemySelect.innerHTML = '';
-      return;
+    if (!elements.combatEnemySelect) return;
+    const zone = getCurrentZone();
+    let enemies = [...(zone?.enemyIds || [])];
+    if (state.combat.active && state.combat.enemyId && !enemies.includes(state.combat.enemyId)) {
+      enemies.push(state.combat.enemyId);
     }
-    const enemies = zone.enemyIds || [];
-    elements.combatEnemySelect.innerHTML = enemies
-      .map((enemyId) => `<option value=\"${enemyId}\">${getEnemy(enemyId).name}</option>`)
-      .join('');
     if (!enemies.length) {
       elements.combatEnemySelect.innerHTML = '<option>No threats mapped</option>';
       state.selected.enemyId = null;
       return;
     }
+    elements.combatEnemySelect.innerHTML = enemies
+      .map((enemyId) => `<option value=\"${enemyId}\">${getEnemy(enemyId).name}</option>`)
+      .join('');
     if (!state.selected.enemyId || !enemies.includes(state.selected.enemyId)) {
       state.selected.enemyId = enemies[0];
     }
@@ -705,15 +851,7 @@
     `;
   }
 
-  function startCombat(enemyId, context = null) {
-    state.combat.enemyId = enemyId;
-    state.combat.context = context;
-    state.selected.enemyId = enemyId;
-    showScreen('combat');
-    renderCombatScreen();
-  }
-
-  function simulateCombat(enemyId) {
+  function enterCombat(enemyId, context = null) {
     const player = state.player;
     const enemy = getEnemy(enemyId);
     if (!player || !enemy) return;
@@ -721,43 +859,208 @@
       addLog('You must recover before entering battle.', logTypes.WARNING);
       return;
     }
-    let playerHealth = player.resources.health;
-    let playerMana = player.resources.mana;
-    let enemyHealth = enemy.stats.health;
-    const playerAttack = calculatePlayerAttack();
+    state.combat.enemyId = enemyId;
+    state.combat.context = context;
+    state.combat.active = true;
+    state.combat.turn = 'player';
+    state.combat.enemyHealth = enemy.stats.health;
+    state.combat.playerHealth = player.resources.health;
+    state.combat.playerMana = player.resources.mana;
+    state.combat.guard = false;
+    state.combat.log = [];
+    state.selected.enemyId = enemyId;
+    addCombatLog(`You engage the ${enemy.name}.`, logTypes.INFO, true);
+    showScreen('combat');
+    renderCombatScreen();
+  }
+
+  function renderCombatState() {
+    if (!elements.combatActions) return;
+    const inCombat = state.combat.active;
+    elements.combatActions.classList.toggle('active', inCombat);
+    const player = state.player;
+    const enemy = getEnemy(state.combat.enemyId);
+    const playerButtons = [
+      elements.combatStrikeButton,
+      elements.combatAbilityButton,
+      elements.combatGuardButton,
+      elements.combatFleeButton
+    ];
+    playerButtons.forEach((button) => {
+      if (!button) return;
+      button.disabled = !inCombat || state.combat.turn !== 'player';
+    });
+    if (elements.engageCombatButton) {
+      elements.engageCombatButton.disabled = inCombat;
+    }
+    if (elements.autoSelectEnemy) {
+      elements.autoSelectEnemy.disabled = inCombat;
+    }
+    if (elements.combatEnemySelect) {
+      elements.combatEnemySelect.disabled = inCombat;
+    }
+    if (!inCombat || !player || !enemy) {
+      const zone = getCurrentZone();
+      elements.combatStatus.innerHTML = zone
+        ? `<p>Select an enemy in ${zone.name} to begin a battle.</p>`
+        : '<p>No battle data available.</p>';
+      renderCombatLog();
+      return;
+    }
+    const playerMaxHealth = getTotalStat(player, 'health');
+    const playerMaxMana = getTotalStat(player, 'mana');
+    const enemyMaxHealth = enemy.stats.health;
+    elements.combatStatus.innerHTML = `
+      <p><strong>${player.name}</strong>: ${Math.round(state.combat.playerHealth)} / ${Math.round(playerMaxHealth)} HP</p>
+      <p><strong>Mana:</strong> ${Math.round(state.combat.playerMana)} / ${Math.round(playerMaxMana)}</p>
+      <p><strong>${enemy.name}</strong>: ${Math.max(0, Math.round(state.combat.enemyHealth))} / ${Math.round(enemyMaxHealth)} HP</p>
+      <p>Turn: ${state.combat.turn === 'player' ? 'Your move' : `${enemy.name}'s move`}</p>
+    `;
+    renderCombatLog();
+  }
+
+  function addCombatLog(message, type = logTypes.INFO, alsoGlobal = false) {
+    state.combat.log.push({ message, type });
+    if (state.combat.log.length > 40) {
+      state.combat.log.shift();
+    }
+    if (alsoGlobal) {
+      addLog(message, type);
+    } else if (elements.combatLog) {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = message;
+      elements.combatLog.appendChild(entry);
+      elements.combatLog.scrollTop = elements.combatLog.scrollHeight;
+    }
+  }
+
+  function renderCombatLog() {
+    if (!elements.combatLog) return;
+    elements.combatLog.innerHTML = state.combat.log
+      .map((entry) => `<div class=\"log-entry ${entry.type}\">${entry.message}</div>`)
+      .join('') || '<p>No combat actions yet.</p>';
+    elements.combatLog.scrollTop = elements.combatLog.scrollHeight;
+  }
+
+  function takeCombatAction(action) {
+    if (!state.combat.active || state.combat.turn !== 'player') return;
+    const enemy = getEnemy(state.combat.enemyId);
+    const player = state.player;
+    if (!enemy || !player) return;
+    if (action === 'strike') {
+      const damage = Math.max(
+        4,
+        Math.round(calculatePlayerAttack() * (0.85 + Math.random() * 0.3) - enemy.stats.defense)
+      );
+      state.combat.enemyHealth -= damage;
+      addCombatLog(`You strike the ${enemy.name} for ${damage} damage.`, logTypes.SUCCESS);
+    } else if (action === 'ability') {
+      const abilityCost = 15;
+      if (state.combat.playerMana < abilityCost) {
+        addCombatLog('You need more mana to unleash a special ability.', logTypes.WARNING);
+        renderCombatState();
+        return;
+      }
+      const abilityName = state.player.abilities?.[0] || 'a signature technique';
+      state.combat.playerMana = Math.max(0, state.combat.playerMana - abilityCost);
+      const damage = Math.max(
+        8,
+        Math.round(calculatePlayerAttack() * 1.1 + 8 - enemy.stats.defense * 0.2)
+      );
+      state.combat.enemyHealth -= damage;
+      addCombatLog(`You channel ${abilityName}, dealing ${damage} damage!`, logTypes.SUCCESS);
+    } else if (action === 'guard') {
+      state.combat.guard = true;
+      addCombatLog('You brace for the next assault, reducing incoming damage.', logTypes.INFO);
+    } else if (action === 'flee') {
+      if (attemptFlee(enemy)) {
+        finishCombat('flee', enemy);
+        return;
+      }
+      addCombatLog('You fail to escape the encounter!', logTypes.WARNING);
+    }
+
+    if (state.combat.enemyHealth <= 0) {
+      finishCombat('victory', enemy);
+      return;
+    }
+    state.combat.turn = 'enemy';
+    renderCombatState();
+    resolveEnemyTurn();
+  }
+
+  function resolveEnemyTurn() {
+    if (!state.combat.active) return;
+    const enemy = getEnemy(state.combat.enemyId);
+    const player = state.player;
+    if (!enemy || !player) return;
     const playerDefense = getTotalStat(player, 'armor');
-    const rounds = [];
-    let roundCount = 0;
-    while (playerHealth > 0 && enemyHealth > 0 && roundCount < 20) {
-      roundCount += 1;
-      const playerDamage = Math.max(4, Math.round(playerAttack * (0.9 + Math.random() * 0.3) - enemy.stats.defense));
-      enemyHealth -= playerDamage;
-      rounds.push(`You strike the ${enemy.name} for ${playerDamage} damage.`);
-      if (enemyHealth <= 0) break;
-      const enemyDamage = Math.max(3, Math.round(enemy.stats.power * (0.9 + Math.random() * 0.3) - playerDefense));
-      playerHealth -= enemyDamage;
-      rounds.push(`The ${enemy.name} hits you for ${enemyDamage} damage.`);
-      if (playerMana > 10 && Math.random() < 0.3) {
-        playerMana -= 10;
-        const abilityDamage = Math.round(playerAttack * 0.6 + 8);
-        enemyHealth -= abilityDamage;
-        rounds.push(`You unleash an ability dealing ${abilityDamage} extra damage.`);
+    let damage = Math.max(
+      3,
+      Math.round(enemy.stats.power * (0.85 + Math.random() * 0.3) - playerDefense * 0.4)
+    );
+    if (state.combat.guard) {
+      damage = Math.round(damage * 0.5);
+      state.combat.guard = false;
+      addCombatLog('Your guard absorbs part of the blow.', logTypes.INFO);
+    }
+    state.combat.playerHealth = Math.max(0, state.combat.playerHealth - damage);
+    addCombatLog(`The ${enemy.name} hits you for ${damage} damage.`, logTypes.DANGER);
+    if (state.combat.playerHealth <= 0) {
+      finishCombat('defeat', enemy);
+      return;
+    }
+    if (enemy.abilities?.length && Math.random() < 0.2) {
+      const abilityName = sample(enemy.abilities);
+      const burst = Math.max(2, Math.round(enemy.stats.power * 0.6));
+      state.combat.playerHealth = Math.max(0, state.combat.playerHealth - burst);
+      addCombatLog(`The ${enemy.name} uses ${abilityName}, dealing ${burst} extra damage.`, logTypes.DANGER);
+      if (state.combat.playerHealth <= 0) {
+        finishCombat('defeat', enemy);
+        return;
       }
     }
-    player.resources.health = Math.max(0, playerHealth);
-    player.resources.mana = clamp(playerMana, 0, getTotalStat(player, 'mana'));
-    if (enemyHealth <= 0 && playerHealth > 0) {
-      handleCombatVictory(enemy, rounds);
-    } else if (playerHealth <= 0) {
-      handleCombatDefeat(enemy, rounds);
-    } else {
-      addLog('The clash ends inconclusively as both sides withdraw.', logTypes.INFO);
-      rounds.forEach((line) => addLog(line, logTypes.INFO));
+    state.combat.turn = 'player';
+    renderCombatState();
+  }
+
+  function finishCombat(outcome, enemy) {
+    const player = state.player;
+    if (!player || !enemy) return;
+    player.resources.health = clamp(Math.round(state.combat.playerHealth), 0, getTotalStat(player, 'health'));
+    player.resources.mana = clamp(Math.round(state.combat.playerMana), 0, getTotalStat(player, 'mana'));
+    if (outcome === 'victory') {
+      addCombatLog(`You defeat the ${enemy.name}!`, logTypes.SUCCESS);
+      handleCombatVictory(enemy, []);
+    } else if (outcome === 'defeat') {
+      addCombatLog(`You fall in battle against the ${enemy.name}.`, logTypes.DANGER);
+      handleCombatDefeat(enemy, []);
+    } else if (outcome === 'flee') {
+      addCombatLog(`You flee from the ${enemy.name}.`, logTypes.WARNING);
+      addLog(`You flee from the ${enemy.name} and escape the encounter.`, logTypes.WARNING);
     }
-    renderLog();
+    state.combat.active = false;
+    state.combat.turn = null;
+    state.combat.enemyHealth = 0;
+    state.combat.enemyId = null;
+    state.combat.context = null;
+    state.combat.guard = false;
+    renderCombatState();
     updatePlayerPanel();
     renderInventory();
     updateQuestLogView();
+    updateNavigationLocks();
+  }
+
+  function attemptFlee(enemy) {
+    const agility = state.player.stats.agility || 0;
+    const fleeChance = clamp(0.3 + agility / 150, 0.25, 0.75);
+    if (Math.random() < fleeChance) {
+      addCombatLog(`You slip away from the ${enemy.name}.`, logTypes.INFO, true);
+      return true;
+    }
+    return false;
   }
 
   function handleCombatVictory(enemy, rounds) {
@@ -816,37 +1119,29 @@
   }
 
   function renderNpcScreen() {
-    populateNpcZones();
-    populateNpcsForZone();
-    renderNpcDetails(state.selected.npcId);
-  }
-
-  function populateNpcZones() {
-    const zoneOptions = Array.from(new Set(data.npcs.map((npc) => npc.zoneId)))
-      .filter(Boolean)
-      .map((zoneId) => `<option value=\"${zoneId}\">${getZone(zoneId)?.name || zoneId}</option>`)
-      .join('');
-    elements.npcZoneSelect.innerHTML = zoneOptions;
-    if (!state.selected.npcZoneId) {
-      state.selected.npcZoneId = data.npcs[0]?.zoneId || data.zones[0]?.id || null;
+    const zone = getCurrentZone();
+    if (elements.npcCurrentZone) {
+      elements.npcCurrentZone.textContent = zone?.name || 'Unknown';
     }
-    if (state.selected.npcZoneId) {
-      elements.npcZoneSelect.value = state.selected.npcZoneId;
+    const npcs = (zone?.npcIds || [])
+      .map((npcId) => getNpc(npcId))
+      .filter(Boolean);
+    if (!npcs.length) {
+      elements.npcSelect.innerHTML = '<option>No allies nearby</option>';
+      elements.npcSelect.disabled = true;
+      elements.npcDetails.textContent = 'Travel to another zone to meet new allies.';
+      state.selected.npcId = null;
+      return;
     }
-  }
-
-  function populateNpcsForZone() {
-    const zoneId = state.selected.npcZoneId;
-    const npcs = data.npcs.filter((npc) => npc.zoneId === zoneId);
+    elements.npcSelect.disabled = false;
     elements.npcSelect.innerHTML = npcs
       .map((npc) => `<option value=\"${npc.id}\">${npc.name}</option>`)
       .join('');
     if (!state.selected.npcId || !npcs.some((npc) => npc.id === state.selected.npcId)) {
-      state.selected.npcId = npcs[0]?.id || null;
+      state.selected.npcId = npcs[0].id;
     }
-    if (state.selected.npcId) {
-      elements.npcSelect.value = state.selected.npcId;
-    }
+    elements.npcSelect.value = state.selected.npcId;
+    renderNpcDetails(state.selected.npcId);
   }
 
   function renderNpcDetails(npcId) {
@@ -866,6 +1161,7 @@
   }
 
   function talkToNpc() {
+    if (!ensureCanAct('chat with allies')) return;
     const npc = getNpc(state.selected.npcId);
     if (!npc) return;
     const line = sample(npc.dialogue || []) || `${npc.name} nods silently.`;
@@ -874,6 +1170,7 @@
   }
 
   function requestQuestFromNpc() {
+    if (!ensureCanAct('request quests')) return;
     const npc = getNpc(state.selected.npcId);
     if (!npc) return;
     const availableQuest = (npc.questIds || []).find((questId) => !hasQuest(questId));
@@ -894,10 +1191,14 @@
   }
 
   function renderTradingScreen(forceRefresh = false) {
-    populateMerchants();
-    const merchant = getNpc(state.selected.merchantId);
+    const zone = getCurrentZone();
+    if (elements.tradingCurrentZone) {
+      elements.tradingCurrentZone.textContent = zone?.name || 'Unknown';
+    }
+    const merchants = populateMerchants();
+    const merchant = merchants.find((npc) => npc.id === state.selected.merchantId) || null;
     if (!merchant) {
-      elements.merchantInfo.textContent = 'Select a merchant to view their wares.';
+      elements.merchantInfo.textContent = 'No merchants are operating in this area.';
       elements.merchantInventory.innerHTML = '';
       elements.sellInventory.innerHTML = '';
       return;
@@ -912,11 +1213,17 @@
   }
 
   function populateMerchants() {
-    const merchants = data.npcs.filter((npc) => (npc.services || []).includes('trading'));
+    const zone = getCurrentZone();
+    const merchants = (zone?.npcIds || [])
+      .map((npcId) => getNpc(npcId))
+      .filter((npc) => (npc?.services || []).includes('trading'));
     if (!merchants.length) {
       elements.merchantSelect.innerHTML = '<option>No merchants available</option>';
-      return;
+      elements.merchantSelect.disabled = true;
+      state.selected.merchantId = null;
+      return [];
     }
+    elements.merchantSelect.disabled = false;
     elements.merchantSelect.innerHTML = merchants
       .map((npc) => `<option value=\"${npc.id}\">${npc.name}</option>`)
       .join('');
@@ -924,6 +1231,7 @@
       state.selected.merchantId = merchants[0].id;
     }
     elements.merchantSelect.value = state.selected.merchantId;
+    return merchants;
   }
 
   function renderMerchantStock(merchant, forceRefresh) {
@@ -1038,22 +1346,27 @@
 
   function gatherResources() {
     if (!state.player) return;
+    if (!ensureCanAct('gather resources')) return;
     const profession = getProfession(state.selected.professionId);
     if (!profession || !(profession.gatherables || []).length) {
       addLog('This profession has no resources to gather.', logTypes.INFO);
       return;
     }
-    const zone = getZone(state.selected.zoneId) || data.zones[0];
+    const zone = getCurrentZone();
     const possible = profession.gatherables.filter((itemId) => zone?.gatherables?.includes(itemId));
     const itemId = sample(possible.length ? possible : profession.gatherables);
     const amount = Math.random() < 0.25 ? 2 : 1;
     grantItem(state.player, itemId, amount);
-    addLog(`You gather ${amount} ${getItem(itemId).name} while working in ${zone?.name || 'the wilds'}.`, logTypes.SUCCESS);
+    addLog(
+      `You gather ${amount} ${getItem(itemId).name} while working in ${zone?.name || 'the wilds'}.`,
+      logTypes.SUCCESS
+    );
     renderInventory();
     updateQuestProgress('collect', itemId, amount);
   }
 
   function craftRecipe(itemId) {
+    if (!ensureCanAct('craft items')) return;
     const profession = getProfession(state.selected.professionId);
     if (!profession) return;
     const recipe = (profession.crafts || []).find((entry) => entry.itemId === itemId);
@@ -1152,6 +1465,8 @@
   }
 
   function useItem(itemId) {
+    if (!ensureCanAct('use items from your pack')) return;
+
     const item = getItem(itemId);
     if (!item || item.type !== 'consumable') return;
     if ((state.player.inventory[itemId] || 0) <= 0) {
@@ -1180,6 +1495,7 @@
   }
 
   function handlePurchase(itemId) {
+    if (!ensureCanAct('trade during combat')) return;
     const merchant = getNpc(state.selected.merchantId);
     if (!merchant) return;
     const entry = (merchant.inventory || []).find((stock) => stock.itemId === itemId);
@@ -1198,6 +1514,7 @@
   }
 
   function handleSale(itemId) {
+    if (!ensureCanAct('trade during combat')) return;
     const merchant = getNpc(state.selected.merchantId);
     if (!merchant) return;
     const quantity = state.player.inventory[itemId] || 0;
@@ -1362,10 +1679,35 @@
 
   function restAtCamp() {
     if (!state.player) return;
+    if (!ensureCanAct('rest')) return;
     state.player.resources.health = getTotalStat(state.player, 'health');
     state.player.resources.mana = getTotalStat(state.player, 'mana');
     addLog('You rest at camp, recovering your strength.', logTypes.INFO);
     updatePlayerPanel();
+  }
+
+  function isInCombat() {
+    return Boolean(state.combat.active);
+  }
+
+  function ensureCanAct(actionDescription) {
+    if (isInCombat()) {
+      const message = actionDescription
+        ? `You cannot ${actionDescription} while engaged in combat!`
+        : 'You are locked in combat and cannot act.';
+      addLog(message, logTypes.WARNING);
+      return false;
+    }
+    return true;
+  }
+
+  function getCurrentZoneId() {
+    return state.player?.location?.zoneId || data.zones[0]?.id || null;
+  }
+
+  function getCurrentZone() {
+    const zoneId = getCurrentZoneId();
+    return zoneId ? getZone(zoneId) : null;
   }
 
   function getClass(id) {

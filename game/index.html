@@ -74,6 +74,7 @@
     </aside>
     <main class="main-area">
       <nav class="activity-tabs" id="activityTabs" aria-label="Gameplay activities">
+        <button data-screen="travel" type="button">Travel</button>
         <button class="active" data-screen="exploration" type="button">Exploration</button>
         <button data-screen="dungeons" type="button">Dungeons</button>
         <button data-screen="combat" type="button">Combat</button>
@@ -81,14 +82,36 @@
         <button data-screen="trading" type="button">Trading</button>
         <button data-screen="professions" type="button">Professions</button>
       </nav>
+      <section id="screen-travel" class="screen" aria-labelledby="activityTabs">
+        <header>
+          <h2>Travel Planner</h2>
+        </header>
+        <div class="screen-grid">
+          <div class="screen-column">
+            <p class="current-zone"><strong>Current Zone:</strong> <span id="travelCurrentZone">-</span></p>
+            <label for="travelDestinationSelect">Destination</label>
+            <select id="travelDestinationSelect"></select>
+            <p id="travelDestinationDescription" class="description"></p>
+            <ul id="travelDestinationMeta" class="bullet-list"></ul>
+            <div class="button-row">
+              <button id="beginTravelButton" type="button">Begin Travel</button>
+            </div>
+          </div>
+          <div class="screen-column">
+            <h3>Highlights</h3>
+            <ul id="travelDestinationHighlights" class="bullet-list"></ul>
+            <h3>Threat Assessment</h3>
+            <ul id="travelDestinationThreats" class="bullet-list"></ul>
+          </div>
+        </div>
+      </section>
       <section id="screen-exploration" class="screen active" aria-labelledby="activityTabs">
         <header>
           <h2>Explore the World</h2>
         </header>
         <div class="screen-grid">
           <div class="screen-column">
-            <label for="explorationZoneSelect">Zone</label>
-            <select id="explorationZoneSelect"></select>
+            <p class="current-zone"><strong>Current Zone:</strong> <span id="explorationCurrentZone">-</span></p>
             <p id="explorationZoneDescription" class="description"></p>
             <ul id="explorationZoneDetails" class="bullet-list"></ul>
             <div class="button-row">
@@ -136,18 +159,31 @@
         </header>
         <div class="screen-grid">
           <div class="screen-column">
-            <label for="combatZoneSelect">Region</label>
-            <select id="combatZoneSelect"></select>
+            <p class="current-zone"><strong>Current Region:</strong> <span id="combatCurrentZone">-</span></p>
+
             <label for="combatEnemySelect">Enemy</label>
             <select id="combatEnemySelect"></select>
             <div class="button-row">
               <button id="engageCombatButton" type="button">Engage Enemy</button>
               <button id="autoSelectEnemy" type="button">Random Encounter</button>
             </div>
+            <div id="combatActions" class="button-row combat-actions">
+              <button id="combatStrikeButton" type="button">Strike</button>
+              <button id="combatAbilityButton" type="button">Ability</button>
+              <button id="combatGuardButton" type="button">Guard</button>
+              <button id="combatFleeButton" type="button">Attempt Flee</button>
+            </div>
+
           </div>
           <div class="screen-column">
             <h3>Enemy Intel</h3>
             <div id="enemyDetails" class="details-card"></div>
+            <h3>Battle Status</h3>
+            <div id="combatStatus" class="details-card"></div>
+            <h3>Battle Log</h3>
+            <div class="details-card combat-log">
+              <div id="combatLog" class="log-entries"></div>
+            </div>
           </div>
         </div>
       </section>
@@ -157,8 +193,7 @@
         </header>
         <div class="screen-grid">
           <div class="screen-column">
-            <label for="npcZoneSelect">Location</label>
-            <select id="npcZoneSelect"></select>
+            <p class="current-zone"><strong>Current Location:</strong> <span id="npcCurrentZone">-</span></p>
             <label for="npcSelect">NPC</label>
             <select id="npcSelect"></select>
             <div class="button-row">
@@ -178,6 +213,7 @@
         </header>
         <div class="screen-grid">
           <div class="screen-column">
+            <p class="current-zone"><strong>Current Market:</strong> <span id="tradingCurrentZone">-</span></p>
             <label for="merchantSelect">Merchant</label>
             <select id="merchantSelect"></select>
             <div class="button-row">
