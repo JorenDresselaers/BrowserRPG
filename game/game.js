@@ -13,6 +13,11 @@
   const data = {};
   const dataIndex = {};
 
+  const STORAGE_KEY = 'ember-sigil-save';
+  const SAVE_DEBOUNCE_MS = 250;
+  let saveTimer = null;
+  const storageSupported = isLocalStorageSupported();
+
   const state = {
     player: null,
     currentScreen: 'exploration',
@@ -24,17 +29,7 @@
       professionId: null,
       recipeId: null
     },
-    combat: {
-      enemyId: null,
-      context: null,
-      active: false,
-      turn: null,
-      enemyHealth: 0,
-      playerHealth: 0,
-      playerMana: 0,
-      guard: false,
-      log: []
-    },
+    combat: createDefaultCombatState(),
     travel: {
       destinationZoneId: null
     },
@@ -207,7 +202,13 @@
     setupTradingControls();
     setupProfessionControls();
     elements.restButton.addEventListener('click', restAtCamp);
-    addLog('World data loaded. Create your hero to begin.', logTypes.INFO);
+    const restored = restoreSavedGame();
+    if (!restored) {
+      elements.newGameModal.classList.remove('hidden');
+      addLog('World data loaded. Create your hero to begin.', logTypes.INFO);
+    } else {
+      addLog(`Welcome back, ${state.player.name}!`, logTypes.SUCCESS);
+    }
   }
 
   function setupNewGameForm() {
@@ -266,11 +267,12 @@
       return;
     }
     state.player = createPlayer(name, classId);
-    state.travel.destinationZoneId = state.player.location.zoneId;
+    setTrackedState(state.travel, 'destinationZoneId', state.player.location.zoneId);
     elements.newGameModal.classList.add('hidden');
     addLog(`Welcome, ${state.player.name} the ${getClass(classId).name}!`, logTypes.SUCCESS);
     updateAllUI();
     showScreen('exploration');
+    saveGame();
   }
 
   function createPlayer(name, classId) {
@@ -377,7 +379,7 @@
 
   function setupTravelControls() {
     elements.travelDestinationSelect?.addEventListener('change', () => {
-      state.travel.destinationZoneId = elements.travelDestinationSelect.value;
+      setTrackedState(state.travel, 'destinationZoneId', elements.travelDestinationSelect.value);
       renderTravelDestination(state.travel.destinationZoneId);
     });
     elements.beginTravelButton?.addEventListener('click', () => {
@@ -392,7 +394,7 @@
 
   function setupDungeonControls() {
     elements.dungeonSelect.addEventListener('change', () => {
-      state.selected.dungeonId = elements.dungeonSelect.value;
+      setTrackedState(state.selected, 'dungeonId', elements.dungeonSelect.value);
       renderDungeonScreen();
     });
     elements.startDungeonButton.addEventListener('click', startDungeonRun);
@@ -400,7 +402,7 @@
 
   function setupCombatControls() {
     elements.combatEnemySelect.addEventListener('change', () => {
-      state.selected.enemyId = elements.combatEnemySelect.value;
+      setTrackedState(state.selected, 'enemyId', elements.combatEnemySelect.value);
       renderEnemyDetails(state.selected.enemyId);
     });
     elements.engageCombatButton.addEventListener('click', () => {
@@ -420,7 +422,7 @@
         addLog('This region has no known enemies to fight.', logTypes.WARNING);
         return;
       }
-      state.selected.enemyId = randomEnemy;
+      setTrackedState(state.selected, 'enemyId', randomEnemy);
       elements.combatEnemySelect.value = randomEnemy;
       renderEnemyDetails(randomEnemy);
       addLog(`A roaming ${getEnemy(randomEnemy).name} crosses your path.`, logTypes.INFO);
@@ -433,7 +435,7 @@
 
   function setupNpcControls() {
     elements.npcSelect.addEventListener('change', () => {
-      state.selected.npcId = elements.npcSelect.value;
+      setTrackedState(state.selected, 'npcId', elements.npcSelect.value);
       renderNpcDetails(state.selected.npcId);
     });
     elements.talkToNpcButton.addEventListener('click', talkToNpc);
@@ -446,7 +448,7 @@
         elements.merchantSelect.value = state.selected.merchantId || '';
         return;
       }
-      state.selected.merchantId = elements.merchantSelect.value;
+      setTrackedState(state.selected, 'merchantId', elements.merchantSelect.value);
       renderTradingScreen();
     });
     elements.refreshMerchantButton.addEventListener('click', () => {
@@ -459,12 +461,12 @@
 
   function setupProfessionControls() {
     elements.professionSelect.addEventListener('change', () => {
-      state.selected.professionId = elements.professionSelect.value;
-      state.selected.recipeId = null;
+      setTrackedState(state.selected, 'professionId', elements.professionSelect.value);
+      setTrackedState(state.selected, 'recipeId', null);
       renderProfessionScreen();
     });
     elements.recipeSelect.addEventListener('change', () => {
-      state.selected.recipeId = elements.recipeSelect.value;
+      setTrackedState(state.selected, 'recipeId', elements.recipeSelect.value);
     });
     elements.gatherButton.addEventListener('click', gatherResources);
     elements.craftButton.addEventListener('click', () => {
@@ -512,6 +514,7 @@
     updateQuestLogView();
     renderInventory();
     renderLog();
+    scheduleSave();
   }
 
   function syncResourceCaps(player) {
@@ -602,7 +605,7 @@
       elements.travelCurrentZone.textContent = currentZone?.name || 'Uncharted Wilds';
     }
     if (!state.travel.destinationZoneId || !getZone(state.travel.destinationZoneId)) {
-      state.travel.destinationZoneId = currentZone?.id || data.zones[0]?.id || null;
+      setTrackedState(state.travel, 'destinationZoneId', currentZone?.id || data.zones[0]?.id || null);
     }
     if (elements.travelDestinationSelect && state.travel.destinationZoneId) {
       elements.travelDestinationSelect.value = state.travel.destinationZoneId;
@@ -673,8 +676,8 @@
       return;
     }
     state.player.location.zoneId = destination.id;
-    state.travel.destinationZoneId = destination.id;
-    state.selected.enemyId = null;
+    setTrackedState(state.travel, 'destinationZoneId', destination.id);
+    setTrackedState(state.selected, 'enemyId', null);
     addLog(`You travel to ${destination.name}.`, logTypes.SUCCESS);
     updateAllUI();
   }
@@ -723,7 +726,7 @@
     } else if (roll < 0.85 && zone.npcIds?.length) {
       const npcId = sample(zone.npcIds);
       addLog(`You come across ${getNpc(npcId).name}.`, logTypes.INFO);
-      state.selected.npcId = npcId;
+      setTrackedState(state.selected, 'npcId', npcId);
       showScreen('npcs');
     } else {
       addLog('You discover ancient carvings detailing forgotten lore.', logTypes.INFO);
@@ -774,14 +777,14 @@
     const dungeons = data.dungeons.filter((dungeon) => dungeon.zoneId === zone?.id);
     if (!dungeons.length) {
       elements.dungeonSelect.innerHTML = '<option>No dungeons discovered</option>';
-      state.selected.dungeonId = null;
+      setTrackedState(state.selected, 'dungeonId', null);
       return [];
     }
     elements.dungeonSelect.innerHTML = dungeons
       .map((dungeon) => `<option value=\"${dungeon.id}\">${dungeon.name}</option>`)
       .join('');
     if (!state.selected.dungeonId || !dungeons.some((d) => d.id === state.selected.dungeonId)) {
-      state.selected.dungeonId = dungeons[0].id;
+      setTrackedState(state.selected, 'dungeonId', dungeons[0].id);
     }
     elements.dungeonSelect.value = state.selected.dungeonId;
     return dungeons;
@@ -821,14 +824,14 @@
     }
     if (!enemies.length) {
       elements.combatEnemySelect.innerHTML = '<option>No threats mapped</option>';
-      state.selected.enemyId = null;
+      setTrackedState(state.selected, 'enemyId', null);
       return;
     }
     elements.combatEnemySelect.innerHTML = enemies
       .map((enemyId) => `<option value=\"${enemyId}\">${getEnemy(enemyId).name}</option>`)
       .join('');
     if (!state.selected.enemyId || !enemies.includes(state.selected.enemyId)) {
-      state.selected.enemyId = enemies[0];
+      setTrackedState(state.selected, 'enemyId', enemies[0]);
     }
     elements.combatEnemySelect.value = state.selected.enemyId;
   }
@@ -868,7 +871,7 @@
     state.combat.playerMana = player.resources.mana;
     state.combat.guard = false;
     state.combat.log = [];
-    state.selected.enemyId = enemyId;
+    setTrackedState(state.selected, 'enemyId', enemyId);
     addCombatLog(`You engage the ${enemy.name}.`, logTypes.INFO, true);
     showScreen('combat');
     renderCombatScreen();
@@ -1130,7 +1133,7 @@
       elements.npcSelect.innerHTML = '<option>No allies nearby</option>';
       elements.npcSelect.disabled = true;
       elements.npcDetails.textContent = 'Travel to another zone to meet new allies.';
-      state.selected.npcId = null;
+      setTrackedState(state.selected, 'npcId', null);
       return;
     }
     elements.npcSelect.disabled = false;
@@ -1138,7 +1141,7 @@
       .map((npc) => `<option value=\"${npc.id}\">${npc.name}</option>`)
       .join('');
     if (!state.selected.npcId || !npcs.some((npc) => npc.id === state.selected.npcId)) {
-      state.selected.npcId = npcs[0].id;
+      setTrackedState(state.selected, 'npcId', npcs[0].id);
     }
     elements.npcSelect.value = state.selected.npcId;
     renderNpcDetails(state.selected.npcId);
@@ -1220,7 +1223,7 @@
     if (!merchants.length) {
       elements.merchantSelect.innerHTML = '<option>No merchants available</option>';
       elements.merchantSelect.disabled = true;
-      state.selected.merchantId = null;
+      setTrackedState(state.selected, 'merchantId', null);
       return [];
     }
     elements.merchantSelect.disabled = false;
@@ -1228,7 +1231,7 @@
       .map((npc) => `<option value=\"${npc.id}\">${npc.name}</option>`)
       .join('');
     if (!state.selected.merchantId || !merchants.some((npc) => npc.id === state.selected.merchantId)) {
-      state.selected.merchantId = merchants[0].id;
+      setTrackedState(state.selected, 'merchantId', merchants[0].id);
     }
     elements.merchantSelect.value = state.selected.merchantId;
     return merchants;
@@ -1302,12 +1305,12 @@
       .join('');
     if (recipes.length) {
       if (!state.selected.recipeId || !recipes.some((recipe) => recipe.itemId === state.selected.recipeId)) {
-        state.selected.recipeId = recipes[0].itemId;
+        setTrackedState(state.selected, 'recipeId', recipes[0].itemId);
       }
       elements.recipeSelect.value = state.selected.recipeId;
     } else {
       elements.recipeSelect.innerHTML = '<option>No recipes learned</option>';
-      state.selected.recipeId = null;
+      setTrackedState(state.selected, 'recipeId', null);
     }
     elements.professionRecipes.innerHTML = recipes
       .map((recipe) => {
@@ -1339,7 +1342,7 @@
       .map((profession) => `<option value=\"${profession.id}\">${profession.name}</option>`)
       .join('');
     if (!state.selected.professionId || !professions.some((p) => p.id === state.selected.professionId)) {
-      state.selected.professionId = professions[0].id;
+      setTrackedState(state.selected, 'professionId', professions[0].id);
     }
     elements.professionSelect.value = state.selected.professionId;
   }
@@ -1675,6 +1678,7 @@
     entry.textContent = message;
     elements.logEntries.appendChild(entry);
     elements.logEntries.scrollTop = elements.logEntries.scrollHeight;
+    scheduleSave();
   }
 
   function restAtCamp() {
@@ -1767,5 +1771,210 @@
       .replace(/_/g, ' ')
       .replace(/^\w/, (c) => c.toUpperCase())
       .trim();
+  }
+
+  function restoreSavedGame() {
+    if (!storageSupported) return false;
+    let raw;
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEY);
+    } catch (error) {
+      console.warn('Unable to access local storage.', error);
+      return false;
+    }
+    if (!raw) return false;
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      console.warn('Failed to parse saved game data.', error);
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch (storageError) {
+        console.warn('Failed to clear invalid save data.', storageError);
+      }
+      return false;
+    }
+    if (!parsed || typeof parsed !== 'object' || !parsed.player || typeof parsed.player !== 'object') {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch (storageError) {
+        console.warn('Failed to clear invalid save data.', storageError);
+      }
+      return false;
+    }
+    hydrateStateFromSave(parsed);
+    return true;
+  }
+
+  function hydrateStateFromSave(saved) {
+    state.player = saved.player;
+    normaliseLoadedPlayer(state.player);
+    state.currentScreen = saved.currentScreen && screenRenderers[saved.currentScreen]
+      ? saved.currentScreen
+      : 'exploration';
+    state.logs = Array.isArray(saved.logs) ? saved.logs.slice(-100) : [];
+    Object.assign(state.selected, saved.selected || {});
+    Object.assign(state.travel, saved.travel || {});
+    state.combat = createDefaultCombatState();
+    sanitizeLoadedState();
+    syncResourceCaps(state.player);
+    elements.newGameModal.classList.add('hidden');
+    updateAllUI();
+    showScreen(state.currentScreen);
+    saveGame();
+  }
+
+  function normaliseLoadedPlayer(player) {
+    player.inventory = player.inventory || {};
+    player.equipment = {
+      weapon: player.equipment?.weapon || null,
+      offHand: player.equipment?.offHand || null,
+      armor: player.equipment?.armor || null,
+      trinket: player.equipment?.trinket || null
+    };
+    player.resources = player.resources || {};
+    player.location = player.location || { zoneId: data.zones[0]?.id || null };
+    player.professions = Array.isArray(player.professions) ? player.professions : [];
+    player.quests = player.quests || { active: [], completed: [] };
+    player.quests.active = (player.quests.active || [])
+      .map((entry) => rehydrateQuestEntry(entry))
+      .filter(Boolean);
+    player.quests.completed = (player.quests.completed || [])
+      .map((entry) => rehydrateQuestEntry(entry))
+      .filter(Boolean);
+  }
+
+  function rehydrateQuestEntry(entry) {
+    if (!entry) return null;
+    const questId = entry.quest?.id || entry.questId;
+    const quest = questId ? getQuest(questId) : null;
+    const objectives = (entry.objectives || []).map((objective) => ({
+      ...objective,
+      progress: objective?.progress ?? 0,
+      completed: Boolean(objective?.completed)
+    }));
+    const fallbackQuest = quest || entry.quest || {
+      id: questId || 'unknown',
+      name: entry.quest?.name || 'Unknown Quest',
+      description: entry.quest?.description || ''
+    };
+    return {
+      quest: fallbackQuest,
+      objectives
+    };
+  }
+
+  function sanitizeLoadedState() {
+    if (!state.player.location || !getZone(state.player.location.zoneId)) {
+      state.player.location = { zoneId: data.zones[0]?.id || null };
+    }
+    if (!getZone(state.travel.destinationZoneId)) {
+      state.travel.destinationZoneId = state.player.location.zoneId;
+    }
+    if (state.selected.dungeonId && !getDungeon(state.selected.dungeonId)) {
+      state.selected.dungeonId = null;
+    }
+    if (state.selected.enemyId && !getEnemy(state.selected.enemyId)) {
+      state.selected.enemyId = null;
+    }
+    if (state.selected.npcId && !getNpc(state.selected.npcId)) {
+      state.selected.npcId = null;
+    }
+    if (state.selected.merchantId && !getNpc(state.selected.merchantId)) {
+      state.selected.merchantId = null;
+    }
+    if (!state.selected.professionId || !state.player.professions.includes(state.selected.professionId)) {
+      state.selected.professionId = state.player.professions[0] || null;
+    }
+    if (state.selected.recipeId) {
+      const profession = getProfession(state.selected.professionId);
+      const hasRecipe = (profession?.crafts || []).some((recipe) => recipe.itemId === state.selected.recipeId);
+      if (!hasRecipe) {
+        state.selected.recipeId = null;
+      }
+    }
+    if (!screenRenderers[state.currentScreen]) {
+      state.currentScreen = 'exploration';
+    }
+    state.logs = (state.logs || [])
+      .filter((entry) => entry && typeof entry.message === 'string' && entry.type)
+      .slice(-100);
+  }
+
+  function saveGame() {
+    if (!storageSupported) return;
+    if (saveTimer) {
+      globalThis.clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    if (!state.player) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        console.warn('Failed to clear saved game data.', error);
+      }
+      return;
+    }
+    const payload = {
+      version: 1,
+      player: state.player,
+      currentScreen: state.currentScreen,
+      selected: state.selected,
+      travel: state.travel,
+      logs: state.logs
+    };
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (error) {
+      console.error('Failed to save game state.', error);
+    }
+  }
+
+  function scheduleSave() {
+    if (!storageSupported || !state.player) return;
+    if (saveTimer) return;
+    saveTimer = globalThis.setTimeout(() => {
+      saveTimer = null;
+      saveGame();
+    }, SAVE_DEBOUNCE_MS);
+  }
+
+  function setTrackedState(container, key, value, options = {}) {
+    if (!container || Object.is(container[key], value)) return false;
+    container[key] = value;
+    if (!options.silent) {
+      scheduleSave();
+    }
+    return true;
+  }
+
+  function createDefaultCombatState() {
+    return {
+      enemyId: null,
+      context: null,
+      active: false,
+      turn: null,
+      enemyHealth: 0,
+      playerHealth: 0,
+      playerMana: 0,
+      guard: false,
+      log: []
+    };
+  }
+
+  function isLocalStorageSupported() {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return false;
+      }
+      const testKey = '__ember_sigil_test__';
+      window.localStorage.setItem(testKey, '1');
+      window.localStorage.removeItem(testKey);
+      return true;
+    } catch (error) {
+      console.warn('Local storage is not available.', error);
+      return false;
+    }
   }
 })();
