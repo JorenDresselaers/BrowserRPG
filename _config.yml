@@ -1,0 +1,10 @@
+title: Browser RPG
+description: >-
+  A simple GitHub Pages site for the BrowserRPG project.
+theme: minima
+
+# Exclude development artifacts from the built site
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
