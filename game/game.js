@@ -592,7 +592,7 @@
 
   function renderPlayerStats() {
     const player = state.player;
-    const stats = ['health', 'mana', 'strength', 'agility', 'intellect', 'armor'];
+    const stats = ['health', 'mana', 'strength', 'agility', 'intellect', 'armor', 'speed'];
     elements.playerStats.innerHTML = stats
       .map((stat) => {
         const base = Math.round(player.stats[stat] || 0);
@@ -885,10 +885,12 @@
     const loot = (enemy.loot || [])
       .map((entry) => `${getItem(entry.itemId)?.name || entry.itemId} (${Math.round(entry.chance * 100)}%)`)
       .join(', ');
+    const speed = Math.round(getEnemySpeed(enemy));
     elements.enemyDetails.innerHTML = `
       <p><strong>Level:</strong> ${enemy.level}</p>
       <p><strong>Type:</strong> ${toTitle(enemy.type)}</p>
       <p><strong>Vitals:</strong> ${enemy.stats.health} health, ${enemy.stats.power} power, ${enemy.stats.defense} defense</p>
+      <p><strong>Speed:</strong> ${speed}</p>
       <p><strong>Abilities:</strong> ${(enemy.abilities || []).join(', ') || 'Unknown'}</p>
       <p><strong>Loot:</strong> ${loot || 'None noted'}</p>
     `;
@@ -905,16 +907,18 @@
     state.combat.enemyId = enemyId;
     state.combat.context = context;
     state.combat.active = true;
-    state.combat.turn = 'player';
+    state.combat.turn = null;
     state.combat.enemyHealth = enemy.stats.health;
     state.combat.playerHealth = player.resources.health;
     state.combat.playerMana = player.resources.mana;
     state.combat.guard = false;
     state.combat.log = [];
+    state.combat.initiative = createCombatInitiative(player, enemy);
     setTrackedState(state.selected, 'enemyId', enemyId);
     addCombatLog(`You engage the ${enemy.name}.`, logTypes.INFO, true);
     showScreen('combat');
-    renderCombatScreen();
+    advanceInitiative();
+    processAutomaticTurns();
   }
 
   function renderCombatState() {
@@ -953,11 +957,26 @@
     const playerMaxHealth = getTotalStat(player, 'health');
     const playerMaxMana = getTotalStat(player, 'mana');
     const enemyMaxHealth = enemy.stats.health;
+    const initiative = state.combat.initiative;
+    const threshold = initiative?.threshold || 100;
+    const playerMeter = clamp(initiative?.player?.meter ?? 0, 0, threshold);
+    const enemyMeter = clamp(initiative?.enemy?.meter ?? 0, 0, threshold);
+    const playerReadiness = Math.round((playerMeter / threshold) * 100);
+    const enemyReadiness = Math.round((enemyMeter / threshold) * 100);
+    const playerSpeed = Math.round(initiative?.player?.speed ?? getPlayerSpeed(player));
+    const enemySpeed = Math.round(initiative?.enemy?.speed ?? getEnemySpeed(enemy));
+    const turnDescription = !state.combat.turn
+      ? 'Rebalancing initiative...'
+      : state.combat.turn === 'player'
+      ? 'Your move'
+      : `${enemy.name} is poised to act`;
     elements.combatStatus.innerHTML = `
       <p><strong>${player.name}</strong>: ${Math.round(state.combat.playerHealth)} / ${Math.round(playerMaxHealth)} HP</p>
       <p><strong>Mana:</strong> ${Math.round(state.combat.playerMana)} / ${Math.round(playerMaxMana)}</p>
       <p><strong>${enemy.name}</strong>: ${Math.max(0, Math.round(state.combat.enemyHealth))} / ${Math.round(enemyMaxHealth)} HP</p>
-      <p>Turn: ${state.combat.turn === 'player' ? 'Your move' : `${enemy.name}'s move`}</p>
+      <p><strong>Speed:</strong> You ${playerSpeed}, ${enemy.name} ${enemySpeed}</p>
+      <p><strong>Readiness:</strong> You ${playerReadiness}%, ${enemy.name} ${enemyReadiness}%</p>
+      <p><strong>Next Action:</strong> ${turnDescription}</p>
     `;
     renderCombatLog();
   }
@@ -986,11 +1005,164 @@
     elements.combatLog.scrollTop = elements.combatLog.scrollHeight;
   }
 
+  function createCombatInitiative(player, enemy) {
+    return {
+      threshold: 100,
+      player: { meter: 0, speed: getPlayerSpeed(player) },
+      enemy: { meter: 0, speed: getEnemySpeed(enemy) }
+    };
+  }
+
+  function getPlayerSpeed(player) {
+    if (!player) return 1;
+    const totalSpeed = getTotalStat(player, 'speed');
+    if (totalSpeed > 0) {
+      return totalSpeed;
+    }
+    const agility = getTotalStat(player, 'agility');
+    return Math.max(5, Math.round(agility * 1.2 + 10));
+  }
+
+  function getEnemySpeed(enemy) {
+    if (!enemy) return 1;
+    const rawSpeed = enemy.stats?.speed;
+    if (rawSpeed > 0) {
+      return rawSpeed;
+    }
+    const crit = enemy.stats?.crit ?? 8;
+    return Math.max(5, Math.round(crit * 1.4 + 8));
+  }
+
+  function advanceInitiative() {
+    if (!state.combat.active) return;
+    const initiative = state.combat.initiative;
+    if (!initiative) return;
+    const player = state.player;
+    const enemy = getEnemy(state.combat.enemyId);
+    const threshold = initiative.threshold > 0 ? initiative.threshold : 100;
+    if (player) {
+      initiative.player.speed = Math.max(1, getPlayerSpeed(player));
+    }
+    if (enemy) {
+      initiative.enemy.speed = Math.max(1, getEnemySpeed(enemy));
+    }
+    const playerEntry = initiative.player;
+    const enemyEntry = initiative.enemy;
+    if (!playerEntry || !enemyEntry) {
+      state.combat.turn = 'player';
+      return;
+    }
+
+    if (playerEntry.meter >= threshold && enemyEntry.meter >= threshold) {
+      if (playerEntry.speed >= enemyEntry.speed) {
+        playerEntry.meter = wrapMeter(playerEntry.meter - threshold, threshold);
+        state.combat.turn = 'player';
+      } else {
+        enemyEntry.meter = wrapMeter(enemyEntry.meter - threshold, threshold);
+        state.combat.turn = 'enemy';
+      }
+      return;
+    }
+
+    if (playerEntry.meter >= threshold) {
+      playerEntry.meter = wrapMeter(playerEntry.meter - threshold, threshold);
+      state.combat.turn = 'player';
+      return;
+    }
+
+    if (enemyEntry.meter >= threshold) {
+      enemyEntry.meter = wrapMeter(enemyEntry.meter - threshold, threshold);
+      state.combat.turn = 'enemy';
+      return;
+    }
+
+    const playerTime = (threshold - playerEntry.meter) / playerEntry.speed;
+    const enemyTime = (threshold - enemyEntry.meter) / enemyEntry.speed;
+
+    let actor = 'player';
+    let delta = playerTime;
+
+    if (!Number.isFinite(playerTime) && Number.isFinite(enemyTime)) {
+      actor = 'enemy';
+      delta = enemyTime;
+    } else if (!Number.isFinite(enemyTime) && Number.isFinite(playerTime)) {
+      actor = 'player';
+      delta = playerTime;
+    } else if (Number.isFinite(playerTime) && Number.isFinite(enemyTime)) {
+      if (enemyTime < playerTime) {
+        actor = 'enemy';
+        delta = enemyTime;
+      } else if (playerTime < enemyTime) {
+        actor = 'player';
+        delta = playerTime;
+      } else {
+        delta = playerTime;
+        if (playerEntry.speed === enemyEntry.speed) {
+          actor = 'player';
+        } else {
+          actor = playerEntry.speed > enemyEntry.speed ? 'player' : 'enemy';
+        }
+      }
+    } else {
+      actor = 'player';
+      delta = 0;
+    }
+
+    const safeDelta = Math.max(0, Number.isFinite(delta) ? delta : 0);
+    playerEntry.meter += playerEntry.speed * safeDelta;
+    enemyEntry.meter += enemyEntry.speed * safeDelta;
+
+    if (actor === 'player') {
+      playerEntry.meter = wrapMeter(playerEntry.meter - threshold, threshold);
+    } else {
+      enemyEntry.meter = wrapMeter(enemyEntry.meter - threshold, threshold);
+    }
+
+    state.combat.turn = actor;
+  }
+
+  function wrapMeter(value, threshold) {
+    if (!Number.isFinite(value)) return 0;
+    if (!(threshold > 0)) return 0;
+    let meter = value % threshold;
+    if (meter < 0) {
+      meter += threshold;
+    }
+    const precision = 1e-6;
+    if (meter > threshold - precision) {
+      return 0;
+    }
+    return meter;
+  }
+
+  function processAutomaticTurns() {
+    if (!state.combat.active) return;
+    if (!state.combat.turn) {
+      advanceInitiative();
+    }
+    while (state.combat.active && state.combat.turn === 'enemy') {
+      renderCombatState();
+      const acted = resolveEnemyTurn();
+      if (!state.combat.active) {
+        return;
+      }
+      renderCombatState();
+      if (!acted) {
+        break;
+      }
+      advanceInitiative();
+    }
+    if (state.combat.active) {
+      renderCombatState();
+    }
+  }
+
   function takeCombatAction(action) {
     if (!state.combat.active || state.combat.turn !== 'player') return;
     const enemy = getEnemy(state.combat.enemyId);
     const player = state.player;
     if (!enemy || !player) return;
+    let actionPerformed = false;
     if (action === 'strike') {
       const damage = Math.max(
         4,
@@ -998,6 +1170,7 @@
       );
       state.combat.enemyHealth -= damage;
       addCombatLog(`You strike the ${enemy.name} for ${damage} damage.`, logTypes.SUCCESS);
+      actionPerformed = true;
     } else if (action === 'ability') {
       const abilityCost = 15;
       if (state.combat.playerMana < abilityCost) {
@@ -1013,31 +1186,39 @@
       );
       state.combat.enemyHealth -= damage;
       addCombatLog(`You channel ${abilityName}, dealing ${damage} damage!`, logTypes.SUCCESS);
+      actionPerformed = true;
     } else if (action === 'guard') {
       state.combat.guard = true;
       addCombatLog('You brace for the next assault, reducing incoming damage.', logTypes.INFO);
+      actionPerformed = true;
     } else if (action === 'flee') {
       if (attemptFlee(enemy)) {
         finishCombat('flee', enemy);
         return;
       }
       addCombatLog('You fail to escape the encounter!', logTypes.WARNING);
+      actionPerformed = true;
+    }
+
+    if (!actionPerformed) {
+      renderCombatState();
+      return;
     }
 
     if (state.combat.enemyHealth <= 0) {
       finishCombat('victory', enemy);
       return;
     }
-    state.combat.turn = 'enemy';
-    renderCombatState();
-    resolveEnemyTurn();
+
+    advanceInitiative();
+    processAutomaticTurns();
   }
 
   function resolveEnemyTurn() {
-    if (!state.combat.active) return;
+    if (!state.combat.active) return false;
     const enemy = getEnemy(state.combat.enemyId);
     const player = state.player;
-    if (!enemy || !player) return;
+    if (!enemy || !player) return false;
     const playerDefense = getTotalStat(player, 'armor');
     let damage = Math.max(
       3,
@@ -1052,7 +1233,7 @@
     addCombatLog(`The ${enemy.name} hits you for ${damage} damage.`, logTypes.DANGER);
     if (state.combat.playerHealth <= 0) {
       finishCombat('defeat', enemy);
-      return;
+      return false;
     }
     if (enemy.abilities?.length && Math.random() < 0.2) {
       const abilityName = sample(enemy.abilities);
@@ -1061,11 +1242,10 @@
       addCombatLog(`The ${enemy.name} uses ${abilityName}, dealing ${burst} extra damage.`, logTypes.DANGER);
       if (state.combat.playerHealth <= 0) {
         finishCombat('defeat', enemy);
-        return;
+        return false;
       }
     }
-    state.combat.turn = 'player';
-    renderCombatState();
+    return true;
   }
 
   function finishCombat(outcome, enemy) {
@@ -1089,6 +1269,7 @@
     state.combat.enemyId = null;
     state.combat.context = null;
     state.combat.guard = false;
+    state.combat.initiative = null;
     renderCombatState();
     updatePlayerPanel();
     renderInventory();
@@ -1999,7 +2180,8 @@
       playerHealth: 0,
       playerMana: 0,
       guard: false,
-      log: []
+      log: [],
+      initiative: null
     };
   }
 
