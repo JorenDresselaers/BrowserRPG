@@ -20,19 +20,16 @@
 
   const state = {
     player: null,
-    currentScreen: 'exploration',
+    currentScreen: 'character',
+    previousScreen: 'character',
     selected: {
-      dungeonId: null,
-      enemyId: null,
       npcId: null,
       merchantId: null,
       professionId: null,
       recipeId: null
     },
     combat: createDefaultCombatState(),
-    travel: {
-      destinationZoneId: null
-    },
+    travel: createDefaultTravelState(),
     logs: []
   };
 
@@ -44,12 +41,8 @@
     playerNameInput: document.getElementById('playerNameInput'),
     classSelect: document.getElementById('classSelect'),
     classDetails: document.getElementById('classDetails'),
-    playerPanel: document.getElementById('playerPanel'),
-    playerPanelToggle: document.getElementById('playerPanelToggle'),
-    playerPanelClose: document.getElementById('playerPanelClose'),
-    playerPanelBackdrop: document.getElementById('playerPanelBackdrop'),
+    screenNav: document.getElementById('screenNav'),
     inventoryToggle: document.getElementById('inventoryToggle'),
-    questLogToggle: document.getElementById('questLogToggle'),
     restButton: document.getElementById('restButton'),
     playerName: document.getElementById('playerName'),
     playerClass: document.getElementById('playerClass'),
@@ -64,39 +57,24 @@
     playerAbilities: document.getElementById('playerAbilities'),
     playerProfessions: document.getElementById('playerProfessions'),
     playerEquipment: document.getElementById('playerEquipment'),
-    activityTabs: document.getElementById('activityTabs'),
-    screens: Array.from(document.querySelectorAll('.screen')),
-    logEntries: document.getElementById('logEntries'),
     inventoryPanel: document.getElementById('inventoryPanel'),
     inventoryList: document.getElementById('inventoryList'),
-    questLogPanel: document.getElementById('questLogPanel'),
     questLogContent: document.getElementById('questLogContent'),
+    logEntries: document.getElementById('logEntries'),
     travelCurrentZone: document.getElementById('travelCurrentZone'),
     travelDestinationSelect: document.getElementById('travelDestinationSelect'),
     travelDestinationDescription: document.getElementById('travelDestinationDescription'),
     travelDestinationMeta: document.getElementById('travelDestinationMeta'),
     travelDestinationHighlights: document.getElementById('travelDestinationHighlights'),
     travelDestinationThreats: document.getElementById('travelDestinationThreats'),
+    travelFocusOptions: document.getElementById('travelFocusOptions'),
     beginTravelButton: document.getElementById('beginTravelButton'),
-    explorationCurrentZone: document.getElementById('explorationCurrentZone'),
-    explorationZoneDescription: document.getElementById('explorationZoneDescription'),
-    explorationZoneDetails: document.getElementById('explorationZoneDetails'),
-    explorationNPCs: document.getElementById('explorationNPCs'),
-    explorationResources: document.getElementById('explorationResources'),
-    explorationPoints: document.getElementById('explorationPoints'),
-    exploreZoneButton: document.getElementById('exploreZoneButton'),
-    scoutZoneButton: document.getElementById('scoutZoneButton'),
-    dungeonSelect: document.getElementById('dungeonSelect'),
-    dungeonDescription: document.getElementById('dungeonDescription'),
-    dungeonObjectives: document.getElementById('dungeonObjectives'),
-    dungeonEncounters: document.getElementById('dungeonEncounters'),
-    dungeonEffects: document.getElementById('dungeonEffects'),
-    dungeonRewards: document.getElementById('dungeonRewards'),
-    startDungeonButton: document.getElementById('startDungeonButton'),
+    travelAdvanceButton: document.getElementById('travelAdvanceButton'),
+    cancelTravelButton: document.getElementById('cancelTravelButton'),
+    travelStatus: document.getElementById('travelStatus'),
+    travelProgressBar: document.getElementById('travelProgressBar'),
+    travelEventLog: document.getElementById('travelEventLog'),
     combatCurrentZone: document.getElementById('combatCurrentZone'),
-    combatEnemySelect: document.getElementById('combatEnemySelect'),
-    engageCombatButton: document.getElementById('engageCombatButton'),
-    autoSelectEnemy: document.getElementById('autoSelectEnemy'),
     enemyDetails: document.getElementById('enemyDetails'),
     combatActions: document.getElementById('combatActions'),
     combatStrikeButton: document.getElementById('combatStrikeButton'),
@@ -105,7 +83,6 @@
     combatFleeButton: document.getElementById('combatFleeButton'),
     combatStatus: document.getElementById('combatStatus'),
     combatLog: document.getElementById('combatLog'),
-    npcCurrentZone: document.getElementById('npcCurrentZone'),
     npcSelect: document.getElementById('npcSelect'),
     npcDetails: document.getElementById('npcDetails'),
     talkToNpcButton: document.getElementById('talkToNpcButton'),
@@ -124,8 +101,13 @@
     craftButton: document.getElementById('craftButton'),
     recipeSelect: document.getElementById('recipeSelect'),
     inventoryItemTemplate: document.getElementById('inventoryItemTemplate'),
-    recipeTemplate: document.getElementById('recipeTemplate')
+    recipeTemplate: document.getElementById('recipeTemplate'),
+    combatScreen: document.getElementById('combatScreen'),
+    townCurrentZone: document.getElementById('townCurrentZone')
   };
+
+  elements.mainScreens = Array.from(document.querySelectorAll('.main-screen'));
+  elements.navButtons = Array.from(elements.screenNav?.querySelectorAll('button[data-screen]') || []);
 
   const overlayToggleButtons = Array.from(document.querySelectorAll('.close-button'));
 
@@ -137,13 +119,11 @@
   };
 
   const screenRenderers = {
+    character: renderCharacterScreen,
     travel: renderTravelScreen,
-    exploration: renderExplorationScreen,
-    dungeons: renderDungeonScreen,
-    combat: renderCombatScreen,
-    npcs: renderNpcScreen,
-    trading: renderTradingScreen,
-    professions: renderProfessionScreen
+    trade: renderTradeScreen,
+    town: renderTownScreen,
+    quests: renderQuestScreen
   };
 
   loadWorldData();
@@ -195,15 +175,12 @@
   function initialiseUI() {
     elements.loading.classList.add('hidden');
     elements.app.classList.remove('hidden');
-    setupMobileLayout();
     setupNewGameForm();
     setupNavigation();
     setupOverlays();
     setupTravelControls();
-    setupExplorationControls();
-    setupDungeonControls();
     setupCombatControls();
-    setupNpcControls();
+    setupTownControls();
     setupTradingControls();
     setupProfessionControls();
     elements.restButton.addEventListener('click', restAtCamp);
@@ -316,7 +293,7 @@
     elements.newGameModal.classList.add('hidden');
     addLog(`Welcome, ${state.player.name} the ${getClass(classId).name}!`, logTypes.SUCCESS);
     updateAllUI();
-    showScreen('exploration');
+    showScreen('character');
     saveGame();
   }
 
@@ -366,7 +343,8 @@
   }
 
   function setupNavigation() {
-    elements.activityTabs.addEventListener('click', (event) => {
+    if (!elements.screenNav) return;
+    elements.screenNav.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-screen]');
       if (!button || button.disabled) return;
       showScreen(button.dataset.screen);
@@ -374,96 +352,17 @@
     updateNavigationLocks();
   }
 
-  function setupMobileLayout() {
-    const { playerPanel, playerPanelToggle, playerPanelClose, playerPanelBackdrop, app } = elements;
-    if (!playerPanel || !playerPanelToggle || !playerPanelBackdrop || !app) {
-      return;
-    }
-
-    const mobileQuery = window.matchMedia('(max-width: 960px)');
-
-    const closePanel = () => {
-      app.classList.remove('player-panel-open');
-      document.body.classList.remove('no-scroll');
-      playerPanelBackdrop.setAttribute('aria-hidden', 'true');
-      playerPanelToggle.setAttribute('aria-expanded', 'false');
-      if (mobileQuery.matches) {
-        playerPanel.setAttribute('aria-hidden', 'true');
-      } else {
-        playerPanel.removeAttribute('aria-hidden');
-      }
-    };
-
-    const openPanel = () => {
-      if (!mobileQuery.matches) return;
-      app.classList.add('player-panel-open');
-      document.body.classList.add('no-scroll');
-      playerPanelBackdrop.setAttribute('aria-hidden', 'false');
-      playerPanelToggle.setAttribute('aria-expanded', 'true');
-      playerPanel.removeAttribute('aria-hidden');
-      requestAnimationFrame(() => playerPanel.focus({ preventScroll: true }));
-    };
-
-    const togglePanel = () => {
-      if (app.classList.contains('player-panel-open')) {
-        closePanel();
-      } else {
-        openPanel();
-      }
-    };
-
-    playerPanelToggle.addEventListener('click', () => {
-      if (mobileQuery.matches) {
-        togglePanel();
-      }
-    });
-
-    if (playerPanelClose) {
-      playerPanelClose.addEventListener('click', closePanel);
-    }
-
-    playerPanelBackdrop.addEventListener('click', closePanel);
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && app.classList.contains('player-panel-open')) {
-        closePanel();
-      }
-    });
-
-    const handleViewportChange = (event) => {
-      if (event.matches) {
-        closePanel();
-      } else {
-        app.classList.remove('player-panel-open');
-        document.body.classList.remove('no-scroll');
-        playerPanelBackdrop.setAttribute('aria-hidden', 'true');
-        playerPanel.removeAttribute('aria-hidden');
-        playerPanelToggle.setAttribute('aria-expanded', 'true');
-      }
-    };
-
-    if (typeof mobileQuery.addEventListener === 'function') {
-      mobileQuery.addEventListener('change', handleViewportChange);
-    } else if (typeof mobileQuery.addListener === 'function') {
-      mobileQuery.addListener(handleViewportChange);
-    }
-    handleViewportChange(mobileQuery);
-  }
-
   function updateNavigationLocks() {
     const inCombat = state.combat.active;
-    elements.activityTabs
-      .querySelectorAll('button[data-screen]')
-      .forEach((button) => {
-        const locked = inCombat && button.dataset.screen !== 'combat';
-        button.disabled = locked;
-        button.classList.toggle('locked', locked);
-      });
+    elements.navButtons.forEach((button) => {
+      const locked = Boolean(inCombat);
+      button.disabled = locked;
+      button.classList.toggle('locked', locked);
+    });
   }
 
   function setupOverlays() {
-    elements.inventoryToggle.addEventListener('click', () => toggleOverlay(elements.inventoryPanel, true));
-    elements.questLogToggle.addEventListener('click', () => toggleOverlay(elements.questLogPanel, true));
+    elements.inventoryToggle?.addEventListener('click', () => toggleOverlay(elements.inventoryPanel, true));
     overlayToggleButtons.forEach((button) => {
       button.addEventListener('click', () => {
         const targetId = button.dataset.close;
@@ -473,7 +372,7 @@
     });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
-        [elements.inventoryPanel, elements.questLogPanel].forEach((panel) => toggleOverlay(panel, false));
+        [elements.inventoryPanel].forEach((panel) => toggleOverlay(panel, false));
       }
     });
     elements.inventoryList.addEventListener('click', (event) => {
@@ -500,67 +399,35 @@
 
   function setupTravelControls() {
     elements.travelDestinationSelect?.addEventListener('change', () => {
-      setTrackedState(state.travel, 'destinationZoneId', elements.travelDestinationSelect.value);
-      renderTravelDestination(state.travel.destinationZoneId);
+      const destinationId = elements.travelDestinationSelect.value;
+      setTrackedState(state.travel, 'destinationZoneId', destinationId);
+      renderTravelDestination(destinationId);
+      renderTravelJourney();
     });
-    elements.beginTravelButton?.addEventListener('click', () => {
-      performTravel();
+    elements.travelFocusOptions?.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-focus]');
+      if (!button) return;
+      setTravelFocus(button.dataset.focus);
     });
-  }
-
-  function setupExplorationControls() {
-    elements.exploreZoneButton.addEventListener('click', exploreZone);
-    elements.scoutZoneButton.addEventListener('click', scoutZone);
-  }
-
-  function setupDungeonControls() {
-    elements.dungeonSelect.addEventListener('change', () => {
-      setTrackedState(state.selected, 'dungeonId', elements.dungeonSelect.value);
-      renderDungeonScreen();
-    });
-    elements.startDungeonButton.addEventListener('click', startDungeonRun);
+    elements.beginTravelButton?.addEventListener('click', beginJourney);
+    elements.travelAdvanceButton?.addEventListener('click', advanceJourneyTurn);
+    elements.cancelTravelButton?.addEventListener('click', cancelJourney);
   }
 
   function setupCombatControls() {
-    elements.combatEnemySelect.addEventListener('change', () => {
-      setTrackedState(state.selected, 'enemyId', elements.combatEnemySelect.value);
-      renderEnemyDetails(state.selected.enemyId);
-    });
-    elements.engageCombatButton.addEventListener('click', () => {
-      if (!state.selected.enemyId) {
-        addLog('Select an enemy to engage in combat.', logTypes.WARNING);
-        return;
-      }
-      if (!ensureCanAct('start another combat')) return;
-      enterCombat(state.selected.enemyId);
-    });
-    elements.autoSelectEnemy.addEventListener('click', () => {
-      if (!ensureCanAct('seek a new foe')) return;
-      const zone = getCurrentZone();
-      if (!zone) return;
-      const randomEnemy = sample(zone.enemyIds);
-      if (!randomEnemy) {
-        addLog('This region has no known enemies to fight.', logTypes.WARNING);
-        return;
-      }
-      setTrackedState(state.selected, 'enemyId', randomEnemy);
-      elements.combatEnemySelect.value = randomEnemy;
-      renderEnemyDetails(randomEnemy);
-      addLog(`A roaming ${getEnemy(randomEnemy).name} crosses your path.`, logTypes.INFO);
-    });
     elements.combatStrikeButton?.addEventListener('click', () => takeCombatAction('strike'));
     elements.combatAbilityButton?.addEventListener('click', () => takeCombatAction('ability'));
     elements.combatGuardButton?.addEventListener('click', () => takeCombatAction('guard'));
     elements.combatFleeButton?.addEventListener('click', () => takeCombatAction('flee'));
   }
 
-  function setupNpcControls() {
-    elements.npcSelect.addEventListener('change', () => {
+  function setupTownControls() {
+    elements.npcSelect?.addEventListener('change', () => {
       setTrackedState(state.selected, 'npcId', elements.npcSelect.value);
       renderNpcDetails(state.selected.npcId);
     });
-    elements.talkToNpcButton.addEventListener('click', talkToNpc);
-    elements.requestQuestButton.addEventListener('click', requestQuestFromNpc);
+    elements.talkToNpcButton?.addEventListener('click', talkToNpc);
+    elements.requestQuestButton?.addEventListener('click', requestQuestFromNpc);
   }
 
   function setupTradingControls() {
@@ -570,13 +437,13 @@
         return;
       }
       setTrackedState(state.selected, 'merchantId', elements.merchantSelect.value);
-      renderTradingScreen();
+      renderTradeScreen();
     });
     elements.refreshMerchantButton.addEventListener('click', () => {
       if (!ensureCanAct('negotiate with merchants')) return;
       if (!state.selected.merchantId) return;
       addLog('The merchant refreshes their stock with new wares.', logTypes.INFO);
-      renderTradingScreen(true);
+      renderTradeScreen(true);
     });
   }
 
@@ -584,7 +451,7 @@
     elements.professionSelect.addEventListener('change', () => {
       setTrackedState(state.selected, 'professionId', elements.professionSelect.value);
       setTrackedState(state.selected, 'recipeId', null);
-      renderProfessionScreen();
+      renderProfessionPanel();
     });
     elements.recipeSelect.addEventListener('change', () => {
       setTrackedState(state.selected, 'recipeId', elements.recipeSelect.value);
@@ -604,17 +471,30 @@
     panel.setAttribute('aria-hidden', open ? 'false' : 'true');
   }
 
+  function openCombatScreen() {
+    if (!elements.combatScreen) return;
+    elements.combatScreen.classList.add('active');
+    elements.combatScreen.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeCombatScreen() {
+    if (!elements.combatScreen) return;
+    elements.combatScreen.classList.remove('active');
+    elements.combatScreen.setAttribute('aria-hidden', 'true');
+  }
+
   function showScreen(screenId) {
-    if (state.combat.active && screenId !== 'combat') {
+    if (!screenRenderers[screenId]) return;
+    if (state.combat.active) {
       addLog('You are locked in combat and cannot switch activities.', logTypes.WARNING);
       return;
     }
-    if (!screenRenderers[screenId]) return;
     state.currentScreen = screenId;
-    elements.activityTabs.querySelectorAll('button').forEach((button) => {
+    state.previousScreen = screenId;
+    elements.navButtons.forEach((button) => {
       button.classList.toggle('active', button.dataset.screen === screenId);
     });
-    elements.screens.forEach((screen) => {
+    elements.mainScreens.forEach((screen) => {
       screen.classList.toggle('active', screen.id === `screen-${screenId}`);
     });
     screenRenderers[screenId]();
@@ -625,16 +505,13 @@
     if (!state.player) return;
     syncResourceCaps(state.player);
     updatePlayerPanel();
+    renderCharacterScreen();
     renderTravelScreen();
-    renderExplorationScreen();
-    renderDungeonScreen();
-    renderCombatScreen();
-    renderNpcScreen();
-    renderTradingScreen();
-    renderProfessionScreen();
-    updateQuestLogView();
+    renderTradeScreen();
+    renderTownScreen();
+    renderQuestScreen();
+    renderCombatState();
     renderInventory();
-    renderLog();
     scheduleSave();
   }
 
@@ -719,6 +596,10 @@
       .join('');
   }
 
+  function renderCharacterScreen() {
+    renderProfessionPanel();
+  }
+
   function renderTravelScreen() {
     populateTravelDestinations();
     const currentZone = getCurrentZone();
@@ -732,14 +613,26 @@
       elements.travelDestinationSelect.value = state.travel.destinationZoneId;
     }
     renderTravelDestination(state.travel.destinationZoneId);
+    updateTravelFocusButtons();
+    renderTravelJourney();
+    renderTravelEventLog();
     if (elements.beginTravelButton) {
-      elements.beginTravelButton.disabled = state.combat.active;
+      elements.beginTravelButton.disabled = state.combat.active || Boolean(state.travel.journey);
+    }
+    if (elements.travelAdvanceButton) {
+      elements.travelAdvanceButton.disabled = state.combat.active || !state.travel.journey || state.travel.journey.pausedForCombat;
+    }
+    if (elements.cancelTravelButton) {
+      elements.cancelTravelButton.disabled = !state.travel.journey;
     }
   }
 
   function populateTravelDestinations() {
-    if (!elements.travelDestinationSelect || !data.zones.length) return;
-    const options = data.zones.map((zone) => `<option value=\"${zone.id}\">${zone.name}</option>`).join('');
+    if (!elements.travelDestinationSelect || !Array.isArray(data.zones)) return;
+    if (elements.travelDestinationSelect.childElementCount === data.zones.length) return;
+    const options = data.zones
+      .map((zone) => `<option value="${zone.id}">${zone.name}</option>`)
+      .join('');
     elements.travelDestinationSelect.innerHTML = options;
   }
 
@@ -748,15 +641,9 @@
     const destination = getZone(zoneId);
     if (!destination) {
       elements.travelDestinationDescription.textContent = 'Select a destination to review travel notes.';
-      if (elements.travelDestinationMeta) {
-        elements.travelDestinationMeta.innerHTML = '';
-      }
-      if (elements.travelDestinationHighlights) {
-        elements.travelDestinationHighlights.innerHTML = '';
-      }
-      if (elements.travelDestinationThreats) {
-        elements.travelDestinationThreats.innerHTML = '';
-      }
+      elements.travelDestinationMeta.innerHTML = '';
+      elements.travelDestinationHighlights.innerHTML = '';
+      elements.travelDestinationThreats.innerHTML = '';
       return;
     }
     if (elements.travelDestinationSelect) {
@@ -764,27 +651,91 @@
     }
     elements.travelDestinationDescription.textContent = destination.description;
     const [minLevel, maxLevel] = destination.levelRange || ['?', '?'];
-    if (elements.travelDestinationMeta) {
-      elements.travelDestinationMeta.innerHTML = `
-        <li>Climate: ${destination.climate || 'Unknown'}</li>
-        <li>Level Range: ${minLevel} - ${maxLevel}</li>
-      `;
+    elements.travelDestinationMeta.innerHTML = `
+      <li>Climate: ${destination.climate || 'Unknown'}</li>
+      <li>Level Range: ${minLevel} - ${maxLevel}</li>
+    `;
+    elements.travelDestinationHighlights.innerHTML = (destination.pointsOfInterest || [])
+      .map((poi) => `<li>${poi}</li>`)
+      .join('') || '<li>No notable landmarks recorded.</li>';
+    const enemyList = (destination.enemyIds || [])
+      .map((enemyId) => getEnemy(enemyId)?.name || enemyId)
+      .join('</li><li>');
+    elements.travelDestinationThreats.innerHTML = enemyList
+      ? `<li>${enemyList}</li>`
+      : '<li>No known threats.</li>';
+  }
+
+  function renderTravelJourney() {
+    const journey = state.travel.journey;
+    if (!journey) {
+      if (elements.travelStatus) {
+        elements.travelStatus.textContent = 'No active journey. Choose a destination and begin your travels.';
+      }
+      if (elements.travelProgressBar) {
+        elements.travelProgressBar.style.width = '0%';
+      }
+      return;
     }
-    if (elements.travelDestinationHighlights) {
-      elements.travelDestinationHighlights.innerHTML = (destination.pointsOfInterest || [])
-        .map((poi) => `<li>${poi}</li>`)
-        .join('') || '<li>No notable landmarks recorded.</li>';
+    const destination = getZone(journey.destinationId);
+    const totalSteps = Math.max(1, journey.totalSteps || 1);
+    const progress = clamp(journey.progress / totalSteps, 0, 1) * 100;
+    if (elements.travelProgressBar) {
+      elements.travelProgressBar.style.width = `${progress}%`;
     }
-    if (elements.travelDestinationThreats) {
-      elements.travelDestinationThreats.innerHTML = (destination.enemyIds || [])
-        .map((enemyId) => `<li>${getEnemy(enemyId)?.name || enemyId}</li>`)
-        .join('') || '<li>No known threats.</li>';
+    if (elements.travelStatus) {
+      const focusLabel = journey.focus === 'gathering' ? 'Gathering' : journey.focus === 'combat' ? 'Seeking Battle' : 'Balanced';
+      const statusLines = [
+        `Journey to ${destination?.name || 'an unknown destination'} — ${journey.progress}/${totalSteps} turns completed.`,
+        `Current focus: ${focusLabel}.`
+      ];
+      if (journey.pausedForCombat) {
+        statusLines.push('Travel is paused until the current combat is resolved.');
+      } else if (journey.pendingArrival) {
+        statusLines.push('Arrival is imminent once the road is clear.');
+      }
+      elements.travelStatus.innerHTML = statusLines.map((line) => `<p>${line}</p>`).join('');
     }
   }
 
-  function performTravel() {
+  function renderTravelEventLog() {
+    if (!elements.travelEventLog) return;
+    if (!state.travel.events?.length) {
+      elements.travelEventLog.innerHTML = '<p>No recent travel events.</p>';
+      return;
+    }
+    elements.travelEventLog.innerHTML = state.travel.events
+      .map((entry) => `<div class="log-entry ${entry.type}">${entry.message}</div>`)
+      .join('');
+  }
+
+  function setTravelFocus(focus) {
+    if (!focus || !['balanced', 'gathering', 'combat'].includes(focus)) {
+      return;
+    }
+    if (state.travel.focus === focus) {
+      updateTravelFocusButtons();
+      return;
+    }
+    state.travel.focus = focus;
+    updateTravelFocusButtons();
+    scheduleSave();
+  }
+
+  function updateTravelFocusButtons() {
+    if (!elements.travelFocusOptions) return;
+    Array.from(elements.travelFocusOptions.querySelectorAll('button[data-focus]')).forEach((button) => {
+      button.classList.toggle('active', button.dataset.focus === state.travel.focus);
+    });
+  }
+
+  function beginJourney() {
     if (!state.player) return;
-    if (!ensureCanAct('travel')) return;
+    if (!ensureCanAct('begin a journey')) return;
+    if (state.travel.journey) {
+      addLog('You are already on the road. Advance the current journey or cancel it.', logTypes.WARNING);
+      return;
+    }
     const destinationId = elements.travelDestinationSelect?.value || state.travel.destinationZoneId;
     const destination = getZone(destinationId);
     if (!destination) {
@@ -793,14 +744,188 @@
     }
     const currentZone = getCurrentZone();
     if (currentZone?.id === destination.id) {
-      addLog('You are already stationed in that zone.', logTypes.INFO);
+      addLog('You already reside in that locale.', logTypes.INFO);
       return;
     }
-    state.player.location.zoneId = destination.id;
-    setTrackedState(state.travel, 'destinationZoneId', destination.id);
-    setTrackedState(state.selected, 'enemyId', null);
-    addLog(`You travel to ${destination.name}.`, logTypes.SUCCESS);
-    updateAllUI();
+    const totalSteps = Math.max(2, 3 + Math.floor(Math.random() * 4));
+    state.travel.journey = {
+      originId: currentZone?.id || destination.id,
+      destinationId: destination.id,
+      totalSteps,
+      progress: 0,
+      focus: state.travel.focus,
+      pausedForCombat: false,
+      pendingArrival: false
+    };
+    state.travel.events = [];
+    addLog(`You set out toward ${destination.name}.`, logTypes.INFO);
+    addTravelEvent(`Departed ${currentZone?.name || 'camp'} bound for ${destination.name}.`, logTypes.INFO);
+    renderTravelScreen();
+  }
+
+  function advanceJourneyTurn() {
+    if (!state.player) return;
+    const journey = state.travel.journey;
+    if (!journey) {
+      addLog('Begin a journey before marching onward.', logTypes.WARNING);
+      return;
+    }
+    if (journey.pausedForCombat) {
+      addLog('Resolve the current combat before continuing your travels.', logTypes.WARNING);
+      return;
+    }
+    if (!ensureCanAct('continue travelling')) return;
+    journey.progress = Math.min(journey.totalSteps, journey.progress + 1);
+    const event = resolveTravelTurnEvent(journey);
+    if (event.type === 'encounter') {
+      const enemy = getEnemy(event.enemyId);
+      if (!enemy) {
+        addTravelEvent('You sense danger nearby, but nothing emerges.', logTypes.INFO);
+      } else {
+        addTravelEvent(`A ${enemy.name} blocks your path!`, logTypes.DANGER);
+        addLog(`A ${enemy.name} challenges you on the road.`, logTypes.WARNING);
+        journey.pausedForCombat = true;
+        enterCombat(enemy.id, { type: 'travel' });
+      }
+    } else if (event.type === 'gather') {
+      const gatheredItem = event.itemId;
+      const amount = event.amount;
+      grantItem(state.player, gatheredItem, amount);
+      addLog(`You gather ${amount} ${getItem(gatheredItem)?.name || gatheredItem}.`, logTypes.SUCCESS);
+      addTravelEvent(`Collected ${amount} ${getItem(gatheredItem)?.name || gatheredItem}.`, logTypes.SUCCESS);
+      renderInventory();
+      updateQuestProgress('collect', gatheredItem, amount);
+    } else if (event.type === 'npc') {
+      const npc = getNpc(event.npcId);
+      addTravelEvent(`You share stories with ${npc?.name || 'a wandering traveller'}.`, logTypes.INFO);
+      addLog(`You meet ${npc?.name || 'a friendly traveller'} on the road.`, logTypes.INFO);
+      if (npc?.id) {
+        setTrackedState(state.selected, 'npcId', npc.id);
+      }
+    } else if (event.type === 'discovery') {
+      addTravelEvent(`You discover ${event.pointOfInterest}.`, logTypes.INFO);
+      addLog(`You discover ${event.pointOfInterest}.`, logTypes.INFO);
+    } else {
+      if (Math.random() < 0.3) {
+        const restored = Math.max(2, Math.round(getTotalStat(state.player, 'health') * 0.05));
+        state.player.resources.health = clamp(state.player.resources.health + restored, 0, getTotalStat(state.player, 'health'));
+        addTravelEvent('A peaceful stretch of road lets you catch your breath.', logTypes.INFO);
+        addLog('The quiet road grants a moment of respite.', logTypes.INFO);
+      } else {
+        addTravelEvent('The road is quiet as you press on.', logTypes.INFO);
+      }
+    }
+
+    if (journey.progress >= journey.totalSteps) {
+      if (state.combat.active) {
+        journey.pendingArrival = true;
+        addTravelEvent('You are moments away from arriving once the battle ends.', logTypes.INFO);
+      } else {
+        completeJourney();
+        return;
+      }
+    }
+    renderTravelScreen();
+    updatePlayerPanel();
+  }
+
+  function cancelJourney() {
+    if (!state.travel.journey) {
+      addLog('No journey to cancel.', logTypes.INFO);
+      return;
+    }
+    addLog('You break camp and postpone the journey.', logTypes.WARNING);
+    addTravelEvent('The journey is cancelled for now.', logTypes.WARNING);
+    state.travel.journey = null;
+    renderTravelScreen();
+  }
+
+  function completeJourney() {
+    const journey = state.travel.journey;
+    if (!journey) return;
+    const destination = getZone(journey.destinationId);
+    state.player.location.zoneId = journey.destinationId;
+    setTrackedState(state.travel, 'destinationZoneId', journey.destinationId);
+    addLog(`You arrive at ${destination?.name || 'your destination'}.`, logTypes.SUCCESS);
+    addTravelEvent(`Arrived at ${destination?.name || 'your destination'}.`, logTypes.SUCCESS);
+    state.travel.journey = null;
+    renderTravelScreen();
+    renderTownScreen();
+    renderTradeScreen();
+  }
+
+  function addTravelEvent(message, type = logTypes.INFO) {
+    if (!state.travel.events) {
+      state.travel.events = [];
+    }
+    state.travel.events.push({ message, type });
+    if (state.travel.events.length > 8) {
+      state.travel.events.splice(0, state.travel.events.length - 8);
+    }
+    renderTravelEventLog();
+    scheduleSave();
+  }
+
+  function resolveTravelTurnEvent(journey) {
+    const origin = getZone(journey.originId);
+    const destination = getZone(journey.destinationId);
+    const enemyPool = Array.from(new Set([...(origin?.enemyIds || []), ...(destination?.enemyIds || [])]));
+    const gatherables = Array.from(new Set([...(origin?.gatherables || []), ...(destination?.gatherables || [])]));
+    const npcs = Array.from(new Set([...(origin?.npcIds || []), ...(destination?.npcIds || [])]));
+    const points = Array.from(new Set([...(origin?.pointsOfInterest || []), ...(destination?.pointsOfInterest || [])]));
+
+    const weights = [
+      { type: 'encounter', weight: enemyPool.length ? 0.28 : 0, data: enemyPool },
+      { type: 'gather', weight: gatherables.length ? 0.32 : 0, data: gatherables },
+      { type: 'discovery', weight: points.length ? 0.2 : 0.15, data: points },
+      { type: 'npc', weight: npcs.length ? 0.14 : 0.08, data: npcs },
+      { type: 'quiet', weight: 0.12, data: null }
+    ];
+
+    if (journey.focus === 'gathering') {
+      weights.forEach((entry) => {
+        if (entry.type === 'gather') entry.weight *= 1.7;
+        if (entry.type === 'encounter') entry.weight *= 0.6;
+      });
+    } else if (journey.focus === 'combat') {
+      weights.forEach((entry) => {
+        if (entry.type === 'encounter') entry.weight *= 1.85;
+        if (entry.type === 'gather') entry.weight *= 0.55;
+      });
+    }
+
+    const totalWeight = weights.reduce((sum, entry) => sum + entry.weight, 0);
+    if (totalWeight <= 0) {
+      return { type: 'quiet' };
+    }
+    let roll = Math.random() * totalWeight;
+    let chosen = weights[weights.length - 1];
+    for (const entry of weights) {
+      roll -= entry.weight;
+      if (roll <= 0) {
+        chosen = entry;
+        break;
+      }
+    }
+
+    if (chosen.type === 'encounter') {
+      const enemyId = sample(chosen.data);
+      return { type: 'encounter', enemyId };
+    }
+    if (chosen.type === 'gather') {
+      const itemId = sample(chosen.data);
+      const amount = Math.random() < 0.35 ? 2 : 1;
+      return { type: 'gather', itemId, amount };
+    }
+    if (chosen.type === 'npc') {
+      const npcId = sample(chosen.data);
+      return { type: 'npc', npcId };
+    }
+    if (chosen.type === 'discovery') {
+      const pointOfInterest = sample(chosen.data) || 'an intriguing landmark';
+      return { type: 'discovery', pointOfInterest };
+    }
+    return { type: 'quiet' };
   }
 
   function renderExplorationScreen() {
@@ -926,41 +1051,11 @@
     enterCombat(enemyId, { dungeonId: dungeon.id, boss: enemyId === dungeon.bossId });
   }
 
-  function renderCombatScreen() {
-    const zone = getCurrentZone();
-    if (elements.combatCurrentZone) {
-      elements.combatCurrentZone.textContent = zone?.name || 'Unknown';
-    }
-    populateCombatEnemies();
-    renderEnemyDetails(state.selected.enemyId);
-    renderCombatState();
-  }
-
-  function populateCombatEnemies() {
-    if (!elements.combatEnemySelect) return;
-    const zone = getCurrentZone();
-    let enemies = [...(zone?.enemyIds || [])];
-    if (state.combat.active && state.combat.enemyId && !enemies.includes(state.combat.enemyId)) {
-      enemies.push(state.combat.enemyId);
-    }
-    if (!enemies.length) {
-      elements.combatEnemySelect.innerHTML = '<option>No threats mapped</option>';
-      setTrackedState(state.selected, 'enemyId', null);
-      return;
-    }
-    elements.combatEnemySelect.innerHTML = enemies
-      .map((enemyId) => `<option value=\"${enemyId}\">${getEnemy(enemyId).name}</option>`)
-      .join('');
-    if (!state.selected.enemyId || !enemies.includes(state.selected.enemyId)) {
-      setTrackedState(state.selected, 'enemyId', enemies[0]);
-    }
-    elements.combatEnemySelect.value = state.selected.enemyId;
-  }
-
   function renderEnemyDetails(enemyId) {
+    if (!elements.enemyDetails) return;
     const enemy = getEnemy(enemyId);
     if (!enemy) {
-      elements.enemyDetails.textContent = 'Select an enemy to view scouting intel.';
+      elements.enemyDetails.innerHTML = '<p>No enemy engaged.</p>';
       return;
     }
     const loot = (enemy.loot || [])
@@ -995,9 +1090,10 @@
     state.combat.guard = false;
     state.combat.log = [];
     state.combat.initiative = createCombatInitiative(player, enemy);
-    setTrackedState(state.selected, 'enemyId', enemyId);
     addCombatLog(`You engage the ${enemy.name}.`, logTypes.INFO, true);
-    showScreen('combat');
+    openCombatScreen();
+    renderCombatState();
+    updateNavigationLocks();
     advanceInitiative();
     processAutomaticTurns();
   }
@@ -1008,6 +1104,11 @@
     elements.combatActions.classList.toggle('active', inCombat);
     const player = state.player;
     const enemy = getEnemy(state.combat.enemyId);
+    if (elements.combatCurrentZone) {
+      const zone = getCurrentZone();
+      elements.combatCurrentZone.textContent = zone?.name || 'Unknown';
+    }
+    renderEnemyDetails(state.combat.enemyId);
     const playerButtons = [
       elements.combatStrikeButton,
       elements.combatAbilityButton,
@@ -1018,20 +1119,8 @@
       if (!button) return;
       button.disabled = !inCombat || state.combat.turn !== 'player';
     });
-    if (elements.engageCombatButton) {
-      elements.engageCombatButton.disabled = inCombat;
-    }
-    if (elements.autoSelectEnemy) {
-      elements.autoSelectEnemy.disabled = inCombat;
-    }
-    if (elements.combatEnemySelect) {
-      elements.combatEnemySelect.disabled = inCombat;
-    }
     if (!inCombat || !player || !enemy) {
-      const zone = getCurrentZone();
-      elements.combatStatus.innerHTML = zone
-        ? `<p>Select an enemy in ${zone.name} to begin a battle.</p>`
-        : '<p>No battle data available.</p>';
+      elements.combatStatus.innerHTML = '<p>No combat is currently underway.</p>';
       renderCombatLog();
       return;
     }
@@ -1332,6 +1421,7 @@
   function finishCombat(outcome, enemy) {
     const player = state.player;
     if (!player || !enemy) return;
+    const context = state.combat.context;
     player.resources.health = clamp(Math.round(state.combat.playerHealth), 0, getTotalStat(player, 'health'));
     player.resources.mana = clamp(Math.round(state.combat.playerMana), 0, getTotalStat(player, 'mana'));
     if (outcome === 'victory') {
@@ -1351,11 +1441,41 @@
     state.combat.context = null;
     state.combat.guard = false;
     state.combat.initiative = null;
+    closeCombatScreen();
     renderCombatState();
     updatePlayerPanel();
     renderInventory();
     updateQuestLogView();
     updateNavigationLocks();
+    handlePostCombatContext(context, outcome);
+  }
+
+  function handlePostCombatContext(context, outcome) {
+    if (context?.type !== 'travel') return;
+    const journey = state.travel.journey;
+    if (!journey) return;
+    journey.pausedForCombat = false;
+    if (outcome === 'defeat') {
+      addTravelEvent('The journey falters as you are forced to retreat.', logTypes.DANGER);
+      state.player.location.zoneId = journey.originId;
+      setTrackedState(state.travel, 'destinationZoneId', journey.originId);
+      state.travel.journey = null;
+      renderTravelScreen();
+      renderTownScreen();
+      renderTradeScreen();
+      return;
+    }
+    if (outcome === 'flee') {
+      addTravelEvent('You escape the danger and regroup on the road.', logTypes.WARNING);
+    } else if (outcome === 'victory') {
+      addTravelEvent('With the enemy defeated, the path ahead is clear.', logTypes.SUCCESS);
+    }
+    if (journey.pendingArrival) {
+      journey.pendingArrival = false;
+      completeJourney();
+    } else {
+      renderTravelScreen();
+    }
   }
 
   function attemptFlee(enemy) {
@@ -1389,7 +1509,6 @@
     if (context?.dungeonId && context.boss) {
       completeDungeon(context.dungeonId);
     }
-    state.combat.context = null;
   }
 
   function handleCombatDefeat(enemy, rounds) {
@@ -1399,7 +1518,6 @@
     state.player.gold -= lostGold;
     state.player.resources.health = Math.max(1, Math.round(getTotalStat(state.player, 'health') * 0.25));
     addLog(`You retreat to safety, losing ${lostGold} gold in the process.`, logTypes.WARNING);
-    state.combat.context = null;
   }
 
   function completeDungeon(dungeonId) {
@@ -1423,10 +1541,10 @@
     return base + equipmentBonus + player.level * 1.5;
   }
 
-  function renderNpcScreen() {
+  function renderTownScreen() {
     const zone = getCurrentZone();
-    if (elements.npcCurrentZone) {
-      elements.npcCurrentZone.textContent = zone?.name || 'Unknown';
+    if (elements.townCurrentZone) {
+      elements.townCurrentZone.textContent = zone?.name || 'Unknown';
     }
     const npcs = (zone?.npcIds || [])
       .map((npcId) => getNpc(npcId))
@@ -1495,7 +1613,7 @@
     );
   }
 
-  function renderTradingScreen(forceRefresh = false) {
+  function renderTradeScreen(forceRefresh = false) {
     const zone = getCurrentZone();
     if (elements.tradingCurrentZone) {
       elements.tradingCurrentZone.textContent = zone?.name || 'Unknown';
@@ -1587,7 +1705,7 @@
       .join('') || '<p>No items match this merchant\'s interests.</p>';
   }
 
-  function renderProfessionScreen() {
+  function renderProfessionPanel() {
     populateProfessionSelect();
     const profession = getProfession(state.selected.professionId);
     if (!profession) {
@@ -1834,7 +1952,7 @@
     addLog(`You sell ${item.name} for ${price} gold.`, logTypes.INFO);
     renderInventory();
     updatePlayerPanel();
-    renderTradingScreen();
+    renderTradeScreen();
   }
 
   function addQuestToPlayer(player, questId) {
@@ -1877,6 +1995,11 @@
     state.player.quests.active = state.player.quests.active.filter((active) => active.quest.id !== entry.quest.id);
     state.player.quests.completed.push(entry);
     checkLevelUp();
+  }
+
+  function renderQuestScreen() {
+    updateQuestLogView();
+    renderLog();
   }
 
   function updateQuestLogView() {
@@ -2114,10 +2237,24 @@
     normaliseLoadedPlayer(state.player);
     state.currentScreen = saved.currentScreen && screenRenderers[saved.currentScreen]
       ? saved.currentScreen
-      : 'exploration';
+      : 'character';
     state.logs = Array.isArray(saved.logs) ? saved.logs.slice(-100) : [];
     Object.assign(state.selected, saved.selected || {});
-    Object.assign(state.travel, saved.travel || {});
+    const loadedTravel = saved.travel && typeof saved.travel === 'object' ? saved.travel : {};
+    Object.assign(state.travel, createDefaultTravelState(), loadedTravel);
+    if (!['balanced', 'gathering', 'combat'].includes(state.travel.focus)) {
+      state.travel.focus = 'balanced';
+    }
+    state.travel.events = Array.isArray(state.travel.events) ? state.travel.events.slice(-8) : [];
+    if (state.travel.journey && typeof state.travel.journey === 'object') {
+      state.travel.journey.focus = ['balanced', 'gathering', 'combat'].includes(state.travel.journey.focus)
+        ? state.travel.journey.focus
+        : state.travel.focus;
+      state.travel.journey.pausedForCombat = Boolean(state.travel.journey.pausedForCombat);
+      state.travel.journey.pendingArrival = Boolean(state.travel.journey.pendingArrival);
+    } else {
+      state.travel.journey = null;
+    }
     state.combat = createDefaultCombatState();
     sanitizeLoadedState();
     syncResourceCaps(state.player);
@@ -2174,12 +2311,6 @@
     if (!getZone(state.travel.destinationZoneId)) {
       state.travel.destinationZoneId = state.player.location.zoneId;
     }
-    if (state.selected.dungeonId && !getDungeon(state.selected.dungeonId)) {
-      state.selected.dungeonId = null;
-    }
-    if (state.selected.enemyId && !getEnemy(state.selected.enemyId)) {
-      state.selected.enemyId = null;
-    }
     if (state.selected.npcId && !getNpc(state.selected.npcId)) {
       state.selected.npcId = null;
     }
@@ -2196,8 +2327,14 @@
         state.selected.recipeId = null;
       }
     }
+    if (state.travel.journey) {
+      const destinationValid = getZone(state.travel.journey.destinationId);
+      if (!destinationValid) {
+        state.travel.journey = null;
+      }
+    }
     if (!screenRenderers[state.currentScreen]) {
-      state.currentScreen = 'exploration';
+      state.currentScreen = 'character';
     }
     state.logs = (state.logs || [])
       .filter((entry) => entry && typeof entry.message === 'string' && entry.type)
@@ -2249,6 +2386,15 @@
       scheduleSave();
     }
     return true;
+  }
+
+  function createDefaultTravelState() {
+    return {
+      destinationZoneId: null,
+      focus: 'balanced',
+      journey: null,
+      events: []
+    };
   }
 
   function createDefaultCombatState() {
