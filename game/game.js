@@ -215,6 +215,7 @@
       .map((cls) => `<option value=\"${cls.id}\">${cls.name}</option>`)
       .join('');
     elements.classSelect.innerHTML = `<option value=\"\" disabled selected>Select a class</option>${classOptions}`;
+    elements.classDetails.innerHTML = '<p class="class-placeholder">Select a class to preview their role, strengths, and starting kit.</p>';
     elements.classSelect.addEventListener('change', () => {
       renderClassDetails(elements.classSelect.value);
     });
@@ -226,29 +227,68 @@
   function renderClassDetails(classId) {
     const classData = dataIndex.classes[classId];
     if (!classData) {
-      elements.classDetails.textContent = 'Select a class to view its details.';
+      elements.classDetails.innerHTML = '<p class="class-placeholder">Select a class to preview their role, strengths, and starting kit.</p>';
       return;
     }
     const startingItems = [...(classData.startingItems || []), classData.startingArmor]
       .filter(Boolean)
       .map((itemId) => dataIndex.items[itemId]?.name || itemId);
-    const statsList = Object.entries(classData.stats)
-      .map(([stat, value]) => `<li><strong>${toTitle(stat)}</strong>: ${value}</li>`)
+    const statsList = Object.entries(classData.stats || {})
+      .map(
+        ([stat, value]) => `
+          <li>
+            <span class=\"stat-name\">${toTitle(stat)}</span>
+            <span class=\"stat-value\">${value}</span>
+          </li>
+        `
+      )
       .join('');
     const abilitiesList = (classData.abilities || [])
       .map((ability) => `<li>${ability}</li>`)
       .join('');
+    const kitList = startingItems.length
+      ? startingItems.map((item) => `<li>${item}</li>`).join('')
+      : '<li class="empty">None</li>';
+    const professions = (classData.startingProfessions || [])
+      .map((id) => dataIndex.professions?.[id]?.name || toTitle(id));
+    const quests = (classData.startingQuests || [])
+      .map((id) => dataIndex.quests?.[id]?.name || toTitle(id));
     elements.classDetails.innerHTML = `
-      <h3>${classData.name}</h3>
-      <p>${classData.description}</p>
-      <h4>Role</h4>
-      <p>${classData.role}</p>
-      <h4>Attributes</h4>
-      <ul class=\"bullet-list\">${statsList}</ul>
-      <h4>Signature Abilities</h4>
-      <ul class=\"bullet-list\">${abilitiesList}</ul>
-      <h4>Starting Kit</h4>
-      <p>${startingItems.join(', ') || 'None'}</p>
+      <div class=\"class-details__content\">
+        <header class=\"class-details__header\">
+          <h3 class=\"class-details__title\">${classData.name}</h3>
+          <span class=\"class-details__role\">${classData.role || 'Adventurer'}</span>
+        </header>
+        <p class=\"class-description\">${classData.description}</p>
+        <div class=\"class-sections-grid\">
+          <section class=\"class-section\">
+            <h4>Attributes</h4>
+            <ul class=\"class-stat-grid\">${statsList || '<li class="empty">No attributes listed</li>'}</ul>
+          </section>
+          <section class=\"class-section\">
+            <h4>Signature Abilities</h4>
+            <ul class=\"class-list\">${abilitiesList || '<li class="empty">No signature abilities listed</li>'}</ul>
+          </section>
+        </div>
+        <section class=\"class-section\">
+          <h4>Starting Kit</h4>
+          <ul class=\"class-kit\">${kitList}</ul>
+          <div class=\"class-meta\">
+            <div class=\"class-meta-item\">
+              <span class=\"class-meta-label\">Starting Gold</span>
+              <span class=\"class-meta-value\">${classData.startingGold ?? 0}</span>
+            </div>
+            <div class=\"class-meta-item\">
+              <span class=\"class-meta-label\">Professions</span>
+              <span class=\"class-meta-value\">${professions.length ? professions.join(', ') : 'None'}</span>
+            </div>
+            <div class=\"class-meta-item\">
+              <span class=\"class-meta-label\">Quests</span>
+              <span class=\"class-meta-value\">${quests.length ? quests.join(', ') : 'None'}</span>
+            </div>
+          </div>
+        </section>
+      </div>
     `;
   }
 

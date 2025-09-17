@@ -266,11 +266,15 @@
         <h2 id="newGameTitle">Create Your Hero</h2>
       </header>
       <form id="newGameForm">
-        <label for="playerNameInput">Hero Name</label>
-        <input id="playerNameInput" name="playerName" type="text" required maxlength="24" placeholder="Enter a name" autocomplete="off">
-        <label for="classSelect">Class</label>
-        <select id="classSelect" name="classId" required></select>
-        <div id="classDetails" class="details-card"></div>
+        <div class="form-field">
+          <label for="playerNameInput">Hero Name</label>
+          <input id="playerNameInput" name="playerName" type="text" required maxlength="24" placeholder="Enter a name" autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label for="classSelect">Class</label>
+          <select id="classSelect" name="classId" required></select>
+        </div>
+        <div id="classDetails" class="class-details" aria-live="polite"></div>
         <div class="modal-actions">
           <button id="startGameButton" type="submit">Begin Adventure</button>
         </div>
