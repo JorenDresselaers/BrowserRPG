@@ -1466,6 +1466,7 @@
 
   function useItem(itemId) {
     if (!ensureCanAct('use items from your pack')) return;
+
     const item = getItem(itemId);
     if (!item || item.type !== 'consumable') return;
     if ((state.player.inventory[itemId] || 0) <= 0) {
