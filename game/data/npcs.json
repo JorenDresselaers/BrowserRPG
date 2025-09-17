@@ -1,0 +1,113 @@
+[
+  {
+    "id": "sentinel_lyra",
+    "name": "Sentinel Lyra",
+    "title": "Watch Captain",
+    "role": "quest_giver",
+    "zoneId": "emberglade_watch",
+    "faction": "Emberguard",
+    "dialogue": [
+      "Hold the line and the wildfires will break before us.",
+      "Report any unusual flames. The spirit grows restless.",
+      "The Emberguard needs heroes willing to step beyond the wall."
+    ],
+    "questIds": ["emberguard_watch"],
+    "services": ["quests"]
+  },
+  {
+    "id": "brock_ironbeard",
+    "name": "Brock Ironbeard",
+    "title": "Quartermaster",
+    "role": "merchant",
+    "zoneId": "emberglade_watch",
+    "faction": "Emberguard",
+    "dialogue": [
+      "Got gear that survived the last blaze. Take a look.",
+      "Ore coming in slow this week. Pay's better for those who bring it.",
+      "Mind the ash on the hilts. It bites back."
+    ],
+    "inventory": [
+      { "itemId": "healing_potion", "price": 8 },
+      { "itemId": "mana_potion", "price": 8 },
+      { "itemId": "bronze_sword", "price": 28 }
+    ],
+    "buyTypes": ["material", "loot"],
+    "services": ["trading", "repairs"]
+  },
+  {
+    "id": "sage_elowen",
+    "name": "Sage Elowen",
+    "title": "Grove Archivist",
+    "role": "lorekeeper",
+    "zoneId": "emberglade_watch",
+    "dialogue": [
+      "The glade remembers every ember ever lit.",
+      "I can teach you the names of the spirits, if you listen."
+    ],
+    "services": ["lore", "profession_trainer"],
+    "trainsProfessions": ["herbalism", "alchemy"]
+  },
+  {
+    "id": "stormcaller_ivra",
+    "name": "Stormcaller Ivra",
+    "title": "Tempest Sage",
+    "role": "quest_giver",
+    "zoneId": "shiverpeak_expanse",
+    "dialogue": [
+      "The storm speaks. Few understand its warnings.",
+      "Bring warmth for the sages trapped beneath the ice."
+    ],
+    "questIds": ["arcanists_request"],
+    "services": ["quests", "profession_trainer"],
+    "trainsProfessions": ["enchanting"]
+  },
+  {
+    "id": "quartermaster_hagan",
+    "name": "Quartermaster Hagan",
+    "title": "Stormwatch Supply",
+    "role": "merchant",
+    "zoneId": "shiverpeak_expanse",
+    "dialogue": [
+      "Metal's brittle up here. Bring ore that's worthy.",
+      "Trade frost-bitten trophies for warm gear."
+    ],
+    "inventory": [
+      { "itemId": "rejuvenation_potion", "price": 18 },
+      { "itemId": "glimmer_silk", "price": 12 },
+      { "itemId": "storm_essence", "price": 26 }
+    ],
+    "buyTypes": ["material", "consumable"],
+    "services": ["trading"]
+  },
+  {
+    "id": "shade_broker",
+    "name": "Shade Broker",
+    "title": "Shadowmarket Dealer",
+    "role": "merchant",
+    "zoneId": "umbral_hollow",
+    "dialogue": [
+      "Secrets for sale. Coin preferred, favors accepted.",
+      "Void relics hum louder the deeper you go."
+    ],
+    "inventory": [
+      { "itemId": "shadow_daggers", "price": 36 },
+      { "itemId": "luminous_thread", "price": 14 },
+      { "itemId": "storm_essence", "price": 30 }
+    ],
+    "buyTypes": ["loot", "trinket"],
+    "services": ["trading", "information"]
+  },
+  {
+    "id": "archivist_mira",
+    "name": "Archivist Mira",
+    "title": "Void Scholar",
+    "role": "quest_giver",
+    "zoneId": "umbral_hollow",
+    "dialogue": [
+      "The catacombs shift nightly. Only the brave map them.",
+      "Bring back records of the void pulses, and I'll reward you handsomely."
+    ],
+    "questIds": ["void_research"],
+    "services": ["quests", "lore"]
+  }
+]
