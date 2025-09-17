@@ -1,0 +1,68 @@
+[
+  {
+    "id": "ember_halls",
+    "name": "Ember Halls",
+    "zoneId": "emberglade_watch",
+    "description": "A labyrinth of charred roots harboring the ancient spirit that fuels the wildfires.",
+    "levelRange": [4, 8],
+    "encounterIds": ["ember_whelp", "ember_sprite", "emberkin_guard"],
+    "bossId": "ember_spirit",
+    "objectives": [
+      "Extinguish the Cinder Altars",
+      "Defeat the Ancient Ember Spirit"
+    ],
+    "rewards": {
+      "xp": 220,
+      "gold": 30,
+      "items": ["ember_coal", "warden_insignia"]
+    },
+    "environmentalEffects": [
+      "Lingering heat increases fire damage dealt and taken.",
+      "Falling embers may ignite the battlefield."
+    ]
+  },
+  {
+    "id": "frostspire_depths",
+    "name": "Frostspire Depths",
+    "zoneId": "shiverpeak_expanse",
+    "description": "Frozen caverns carved beneath the storm-ravaged peaks.",
+    "levelRange": [7, 11],
+    "encounterIds": ["frost_troll", "glacial_wisp"],
+    "bossId": "frostwarden",
+    "objectives": [
+      "Free the trapped storm sages",
+      "Shatter the Frostwarden's heartstone"
+    ],
+    "rewards": {
+      "xp": 320,
+      "gold": 46,
+      "items": ["storm_essence", "rejuvenation_potion"]
+    },
+    "environmentalEffects": [
+      "Howling winds sap agility unless you huddle near braziers.",
+      "Frozen ground may stun careless adventurers."
+    ]
+  },
+  {
+    "id": "umbral_catacombs",
+    "name": "Umbral Catacombs",
+    "zoneId": "umbral_hollow",
+    "description": "Collapsed temples now riddled with void rifts and restless spirits.",
+    "levelRange": [9, 13],
+    "encounterIds": ["umbral_stalker", "voidcaller"],
+    "bossId": "void_revenant",
+    "objectives": [
+      "Seal the rift anchors",
+      "Banish the Void Revenant"
+    ],
+    "rewards": {
+      "xp": 420,
+      "gold": 58,
+      "items": ["shadow_daggers", "storm_essence"]
+    },
+    "environmentalEffects": [
+      "Shifting shadows hide traps until revealed by light.",
+      "Periodic void pulses drain mana." 
+    ]
+  }
+]

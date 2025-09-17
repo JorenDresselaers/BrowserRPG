@@ -1,0 +1,146 @@
+[
+  {
+    "id": "warden",
+    "name": "Ember Warden",
+    "role": "Vanguard",
+    "description": "Shield-bearing defenders who hold the line with unwavering resolve.",
+    "stats": {
+      "health": 140,
+      "mana": 40,
+      "strength": 12,
+      "agility": 6,
+      "intellect": 6,
+      "armor": 10
+    },
+    "statGrowth": {
+      "health": 22,
+      "mana": 6,
+      "strength": 3,
+      "agility": 1,
+      "intellect": 1,
+      "armor": 2
+    },
+    "abilities": [
+      "Shield Slam",
+      "Guardian's Roar",
+      "Bulwark"
+    ],
+    "startingItems": [
+      "rusty_sword",
+      "training_shield",
+      "healing_potion"
+    ],
+    "startingArmor": "leather_vest",
+    "startingGold": 18,
+    "startingProfessions": ["mining", "blacksmithing"],
+    "startingQuests": ["emberguard_watch"]
+  },
+  {
+    "id": "ranger",
+    "name": "Wild Ranger",
+    "role": "Skirmisher",
+    "description": "Hunters who strike from afar and disappear into the wilds.",
+    "stats": {
+      "health": 120,
+      "mana": 60,
+      "strength": 8,
+      "agility": 12,
+      "intellect": 7,
+      "armor": 6
+    },
+    "statGrowth": {
+      "health": 18,
+      "mana": 10,
+      "strength": 2,
+      "agility": 3,
+      "intellect": 2,
+      "armor": 1
+    },
+    "abilities": [
+      "Twin Arrows",
+      "Camouflaged Step",
+      "Bestial Bond"
+    ],
+    "startingItems": [
+      "scout_bow",
+      "healing_potion",
+      "mana_potion"
+    ],
+    "startingArmor": "leather_vest",
+    "startingGold": 22,
+    "startingProfessions": ["herbalism", "alchemy"],
+    "startingQuests": ["emberguard_watch"]
+  },
+  {
+    "id": "arcanist",
+    "name": "Storm Arcanist",
+    "role": "Spellcaster",
+    "description": "Scholars of the arcane who weave the storm into devastating spells.",
+    "stats": {
+      "health": 100,
+      "mana": 120,
+      "strength": 5,
+      "agility": 7,
+      "intellect": 14,
+      "armor": 4
+    },
+    "statGrowth": {
+      "health": 14,
+      "mana": 18,
+      "strength": 1,
+      "agility": 2,
+      "intellect": 4,
+      "armor": 1
+    },
+    "abilities": [
+      "Lightning Coil",
+      "Arcane Surge",
+      "Tempest Barrier"
+    ],
+    "startingItems": [
+      "menders_tome",
+      "focus_crystal",
+      "mana_potion"
+    ],
+    "startingArmor": "acolyte_robes",
+    "startingGold": 20,
+    "startingProfessions": ["enchanting", "tailoring"],
+    "startingQuests": ["emberguard_watch", "arcanists_request"]
+  },
+  {
+    "id": "templar",
+    "name": "Radiant Templar",
+    "role": "Battle Cleric",
+    "description": "Warrior-priests who fight with steel in hand and light in their hearts.",
+    "stats": {
+      "health": 130,
+      "mana": 90,
+      "strength": 9,
+      "agility": 7,
+      "intellect": 10,
+      "armor": 8
+    },
+    "statGrowth": {
+      "health": 20,
+      "mana": 12,
+      "strength": 2,
+      "agility": 1,
+      "intellect": 3,
+      "armor": 2
+    },
+    "abilities": [
+      "Sunlance",
+      "Radiant Ward",
+      "Revitalizing Hymn"
+    ],
+    "startingItems": [
+      "rusty_sword",
+      "menders_tome",
+      "healing_potion"
+    ],
+    "startingArmor": "acolyte_robes",
+    "startingGold": 21,
+    "startingProfessions": ["herbalism", "enchanting"],
+    "startingQuests": ["emberguard_watch"]
+  }
+]

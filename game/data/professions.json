@@ -1,0 +1,74 @@
+[
+  {
+    "id": "mining",
+    "name": "Mining",
+    "type": "gathering",
+    "description": "Harvest ore and mineral fuels from the zones' rich veins.",
+    "gatherables": ["bronze_ore", "ember_coal"],
+    "tools": "Pickaxe"
+  },
+  {
+    "id": "blacksmithing",
+    "name": "Blacksmithing",
+    "type": "crafting",
+    "description": "Forge weapons and shields for the Emberguard.",
+    "requires": ["mining"],
+    "crafts": [
+      {
+        "itemId": "bronze_sword",
+        "requirements": { "bronze_ore": 3, "ember_coal": 1 },
+        "description": "Hammer bronze ore into a serviceable longsword."
+      }
+    ]
+  },
+  {
+    "id": "herbalism",
+    "name": "Herbalism",
+    "type": "gathering",
+    "description": "Collect rare herbs and spores from the wilds.",
+    "gatherables": ["ember_leaf"],
+    "tools": "Foraging Satchel"
+  },
+  {
+    "id": "alchemy",
+    "name": "Alchemy",
+    "type": "crafting",
+    "description": "Brew tonics and elixirs that restore and empower adventurers.",
+    "requires": ["herbalism"],
+    "crafts": [
+      {
+        "itemId": "rejuvenation_potion",
+        "requirements": { "ember_leaf": 2, "spring_water": 1 },
+        "description": "Infuse emberleaf into pristine springwater for a revitalizing draught."
+      }
+    ]
+  },
+  {
+    "id": "enchanting",
+    "name": "Enchanting",
+    "type": "crafting",
+    "description": "Imbue weapons and armor with elemental energies.",
+    "requires": [],
+    "crafts": [
+      {
+        "itemId": "ember_staff",
+        "requirements": { "storm_essence": 1, "ember_leaf": 1 },
+        "description": "Bind storm essence to a staff using emberleaf as a catalyst."
+      }
+    ]
+  },
+  {
+    "id": "tailoring",
+    "name": "Tailoring",
+    "type": "crafting",
+    "description": "Sew light armor and trinkets using woven fibers.",
+    "requires": [],
+    "crafts": [
+      {
+        "itemId": "focus_crystal",
+        "requirements": { "glimmer_silk": 1, "luminous_thread": 2 },
+        "description": "Wrap glimmer silk around luminous thread to cradle a focus crystal."
+      }
+    ]
+  }
+]
