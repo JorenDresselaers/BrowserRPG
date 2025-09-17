@@ -9,263 +9,248 @@
 <body>
   <div id="loading" class="loading">Loading world data...</div>
   <div id="app" class="app hidden" aria-live="polite">
-    <aside id="playerPanel" class="player-panel" aria-label="Player information" tabindex="-1">
-      <button id="playerPanelClose" class="player-panel-close" type="button" aria-label="Close player panel">
-        ×
-      </button>
-      <header class="player-header">
-        <h1>Ember Sigil</h1>
-        <p class="tagline">A data-driven browser RPG prototype</p>
-      </header>
-      <section class="player-summary">
-        <div class="summary-field">
-          <span class="label">Hero</span>
-          <span class="value" id="playerName">-</span>
-        </div>
-        <div class="summary-field">
-          <span class="label">Class</span>
-          <span class="value" id="playerClass">-</span>
-        </div>
-        <div class="summary-field">
-          <span class="label">Level</span>
-          <span class="value" id="playerLevel">1</span>
-        </div>
-        <div class="summary-field">
-          <span class="label">Experience</span>
-          <span class="value" id="playerXp">0 / 0</span>
-        </div>
-        <div class="resource-row" aria-live="polite">
-          <span class="label">Health</span>
-          <div class="resource-bar">
-            <div id="healthBar" class="resource-fill"></div>
-          </div>
-          <span class="value" id="healthValue">0 / 0</span>
-        </div>
-        <div class="resource-row" aria-live="polite">
-          <span class="label">Mana</span>
-          <div class="resource-bar">
-            <div id="manaBar" class="resource-fill mana"></div>
-          </div>
-          <span class="value" id="manaValue">0 / 0</span>
-        </div>
-        <div class="summary-field">
-          <span class="label">Gold</span>
-          <span class="value" id="playerGold">0</span>
-        </div>
-      </section>
-      <div class="player-actions">
-        <button id="inventoryToggle" type="button">Inventory</button>
-        <button id="questLogToggle" type="button">Quest Log</button>
-        <button id="restButton" type="button">Rest at Camp</button>
-      </div>
-      <section class="player-stats" aria-label="Player attributes">
-        <h2>Attributes</h2>
-        <ul id="playerStats"></ul>
-      </section>
-      <section class="player-abilities" aria-label="Equipped abilities">
-        <h2>Abilities</h2>
-        <ul id="playerAbilities"></ul>
-      </section>
-      <section class="player-professions" aria-label="Professions">
-        <h2>Professions</h2>
-        <ul id="playerProfessions"></ul>
-      </section>
-      <section class="player-equipment" aria-label="Equipment">
-        <h2>Equipment</h2>
-        <ul id="playerEquipment"></ul>
-      </section>
-    </aside>
-    <div id="playerPanelBackdrop" class="player-panel-backdrop" aria-hidden="true" role="presentation"></div>
-    <main class="main-area">
-      <nav class="activity-tabs" id="activityTabs" aria-label="Gameplay activities">
-        <button id="playerPanelToggle" class="player-panel-toggle" type="button" aria-controls="playerPanel" aria-expanded="false" aria-label="Toggle player panel">
-          <span class="icon" aria-hidden="true">☰</span>
-          <span class="label">Player Menu</span>
-        </button>
-        <button data-screen="travel" type="button">Travel</button>
-        <button class="active" data-screen="exploration" type="button">Exploration</button>
-        <button data-screen="dungeons" type="button">Dungeons</button>
-        <button data-screen="combat" type="button">Combat</button>
-        <button data-screen="npcs" type="button">NPCs</button>
-        <button data-screen="trading" type="button">Trading</button>
-        <button data-screen="professions" type="button">Professions</button>
-      </nav>
-      <section id="screen-travel" class="screen" aria-labelledby="activityTabs">
-        <header>
-          <h2>Travel Planner</h2>
+    <div class="layout">
+      <aside class="sidebar" aria-label="Hero summary">
+        <header class="player-header">
+          <h1>Ember Sigil</h1>
+          <p class="tagline">A data-driven browser RPG prototype</p>
         </header>
-        <div class="screen-grid">
-          <div class="screen-column">
-            <p class="current-zone"><strong>Current Zone:</strong> <span id="travelCurrentZone">-</span></p>
-            <label for="travelDestinationSelect">Destination</label>
-            <select id="travelDestinationSelect"></select>
-            <p id="travelDestinationDescription" class="description"></p>
-            <ul id="travelDestinationMeta" class="bullet-list"></ul>
-            <div class="button-row">
-              <button id="beginTravelButton" type="button">Begin Travel</button>
+        <section class="player-summary">
+          <div class="summary-field">
+            <span class="label">Hero</span>
+            <span class="value" id="playerName">-</span>
+          </div>
+          <div class="summary-field">
+            <span class="label">Class</span>
+            <span class="value" id="playerClass">-</span>
+          </div>
+          <div class="summary-field">
+            <span class="label">Level</span>
+            <span class="value" id="playerLevel">1</span>
+          </div>
+          <div class="summary-field">
+            <span class="label">Experience</span>
+            <span class="value" id="playerXp">0 / 0</span>
+          </div>
+          <div class="resource-row" aria-live="polite">
+            <span class="label">Health</span>
+            <div class="resource-bar">
+              <div id="healthBar" class="resource-fill"></div>
             </div>
+            <span class="value" id="healthValue">0 / 0</span>
           </div>
-          <div class="screen-column">
-            <h3>Highlights</h3>
-            <ul id="travelDestinationHighlights" class="bullet-list"></ul>
-            <h3>Threat Assessment</h3>
-            <ul id="travelDestinationThreats" class="bullet-list"></ul>
+          <div class="resource-row" aria-live="polite">
+            <span class="label">Mana</span>
+            <div class="resource-bar">
+              <div id="manaBar" class="resource-fill mana"></div>
+            </div>
+            <span class="value" id="manaValue">0 / 0</span>
           </div>
+          <div class="summary-field">
+            <span class="label">Gold</span>
+            <span class="value" id="playerGold">0</span>
+          </div>
+        </section>
+        <nav id="screenNav" class="sidebar-nav" aria-label="Game screens">
+          <button class="active" data-screen="character" type="button">Character</button>
+          <button data-screen="travel" type="button">Travel</button>
+          <button data-screen="trade" type="button">Trade</button>
+          <button data-screen="town" type="button">Town</button>
+          <button data-screen="quests" type="button">Quest Log</button>
+        </nav>
+        <div class="sidebar-actions">
+          <button id="inventoryToggle" type="button">Inventory</button>
+          <button id="restButton" type="button">Rest at Camp</button>
         </div>
-      </section>
-      <section id="screen-exploration" class="screen active" aria-labelledby="activityTabs">
-        <header>
-          <h2>Explore the World</h2>
-        </header>
-        <div class="screen-grid">
-          <div class="screen-column">
-            <p class="current-zone"><strong>Current Zone:</strong> <span id="explorationCurrentZone">-</span></p>
-            <p id="explorationZoneDescription" class="description"></p>
-            <ul id="explorationZoneDetails" class="bullet-list"></ul>
-            <div class="button-row">
-              <button id="exploreZoneButton" type="button">Explore Zone</button>
-              <button id="scoutZoneButton" type="button">Scout Threats</button>
+      </aside>
+      <main class="main-area">
+        <section id="screen-character" class="main-screen active" aria-labelledby="characterTitle">
+          <header class="screen-header">
+            <h2 id="characterTitle">Character</h2>
+            <p class="screen-subtitle">Attributes, abilities, and equipment.</p>
+          </header>
+          <div class="screen-grid">
+            <section class="panel">
+              <h3>Attributes</h3>
+              <ul id="playerStats"></ul>
+            </section>
+            <section class="panel">
+              <h3>Abilities</h3>
+              <ul id="playerAbilities"></ul>
+            </section>
+            <section class="panel">
+              <h3>Equipment</h3>
+              <ul id="playerEquipment"></ul>
+            </section>
+          </div>
+          <section class="panel professions-panel">
+            <header class="panel-header">
+              <h3>Professions</h3>
+              <p class="panel-subtitle">Manage trained disciplines and crafting recipes.</p>
+            </header>
+            <ul id="playerProfessions" class="tag-list"></ul>
+            <div class="form-grid">
+              <label for="professionSelect">Active Profession</label>
+              <select id="professionSelect"></select>
+              <p id="professionDescription" class="description"></p>
+              <label for="recipeSelect">Recipes</label>
+              <select id="recipeSelect"></select>
             </div>
-          </div>
-          <div class="screen-column">
-            <h3>Connected Locations</h3>
-            <div id="explorationPoints"></div>
-            <h3>Known NPCs</h3>
-            <ul id="explorationNPCs" class="bullet-list"></ul>
-            <h3>Gatherable Resources</h3>
-            <ul id="explorationResources" class="bullet-list"></ul>
-          </div>
-        </div>
-      </section>
-      <section id="screen-dungeons" class="screen" aria-labelledby="activityTabs">
-        <header>
-          <h2>Dungeon Expeditions</h2>
-        </header>
-        <div class="screen-grid">
-          <div class="screen-column">
-            <label for="dungeonSelect">Dungeon</label>
-            <select id="dungeonSelect"></select>
-            <p id="dungeonDescription" class="description"></p>
-            <ul id="dungeonObjectives" class="bullet-list"></ul>
-            <div class="button-row">
-              <button id="startDungeonButton" type="button">Begin Expedition</button>
-            </div>
-          </div>
-          <div class="screen-column">
-            <h3>Encounter Table</h3>
-            <ul id="dungeonEncounters" class="bullet-list"></ul>
-            <h3>Environmental Effects</h3>
-            <ul id="dungeonEffects" class="bullet-list"></ul>
-            <h3>Rewards</h3>
-            <ul id="dungeonRewards" class="bullet-list"></ul>
-          </div>
-        </div>
-      </section>
-      <section id="screen-combat" class="screen" aria-labelledby="activityTabs">
-        <header>
-          <h2>Combat Simulator</h2>
-        </header>
-        <div class="screen-grid">
-          <div class="screen-column">
-            <p class="current-zone"><strong>Current Region:</strong> <span id="combatCurrentZone">-</span></p>
-
-            <label for="combatEnemySelect">Enemy</label>
-            <select id="combatEnemySelect"></select>
-            <div class="button-row">
-              <button id="engageCombatButton" type="button">Engage Enemy</button>
-              <button id="autoSelectEnemy" type="button">Random Encounter</button>
-            </div>
-            <div id="combatActions" class="button-row combat-actions">
-              <button id="combatStrikeButton" type="button">Strike</button>
-              <button id="combatAbilityButton" type="button">Ability</button>
-              <button id="combatGuardButton" type="button">Guard</button>
-              <button id="combatFleeButton" type="button">Attempt Flee</button>
-            </div>
-
-          </div>
-          <div class="screen-column">
-            <h3>Enemy Intel</h3>
-            <div id="enemyDetails" class="details-card"></div>
-            <h3>Battle Status</h3>
-            <div id="combatStatus" class="details-card"></div>
-            <h3>Battle Log</h3>
-            <div class="details-card combat-log">
-              <div id="combatLog" class="log-entries"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-      <section id="screen-npcs" class="screen" aria-labelledby="activityTabs">
-        <header>
-          <h2>NPC Interactions</h2>
-        </header>
-        <div class="screen-grid">
-          <div class="screen-column">
-            <p class="current-zone"><strong>Current Location:</strong> <span id="npcCurrentZone">-</span></p>
-            <label for="npcSelect">NPC</label>
-            <select id="npcSelect"></select>
-            <div class="button-row">
-              <button id="talkToNpcButton" type="button">Talk</button>
-              <button id="requestQuestButton" type="button">Request Quest</button>
-            </div>
-          </div>
-          <div class="screen-column">
-            <h3>Personality &amp; Services</h3>
-            <div id="npcDetails" class="details-card"></div>
-          </div>
-        </div>
-      </section>
-      <section id="screen-trading" class="screen" aria-labelledby="activityTabs">
-        <header>
-          <h2>Trading Post</h2>
-        </header>
-        <div class="screen-grid">
-          <div class="screen-column">
-            <p class="current-zone"><strong>Current Market:</strong> <span id="tradingCurrentZone">-</span></p>
-            <label for="merchantSelect">Merchant</label>
-            <select id="merchantSelect"></select>
-            <div class="button-row">
-              <button id="refreshMerchantButton" type="button">Refresh Stock</button>
-            </div>
-            <div id="merchantInfo" class="details-card"></div>
-          </div>
-          <div class="screen-column">
-            <h3>Shop Inventory</h3>
-            <div id="merchantInventory" class="list-grid"></div>
-            <h3>Sellable Goods</h3>
-            <div id="sellInventory" class="list-grid"></div>
-          </div>
-        </div>
-      </section>
-      <section id="screen-professions" class="screen" aria-labelledby="activityTabs">
-        <header>
-          <h2>Professions</h2>
-        </header>
-        <div class="screen-grid">
-          <div class="screen-column">
-            <label for="professionSelect">Profession</label>
-            <select id="professionSelect"></select>
-            <p id="professionDescription" class="description"></p>
-            <label for="recipeSelect">Recipe</label>
-            <select id="recipeSelect"></select>
             <div class="button-row">
               <button id="gatherButton" type="button">Gather Resources</button>
               <button id="craftButton" type="button">Craft Item</button>
             </div>
+            <div class="profession-details">
+              <section>
+                <h4>Available Gatherables</h4>
+                <ul id="professionGatherables" class="bullet-list"></ul>
+              </section>
+              <section>
+                <h4>Crafting Recipes</h4>
+                <div id="professionRecipes" class="list-grid"></div>
+              </section>
+            </div>
+          </section>
+        </section>
+
+        <section id="screen-travel" class="main-screen" aria-labelledby="travelTitle">
+          <header class="screen-header">
+            <h2 id="travelTitle">Travel</h2>
+            <p class="screen-subtitle">Chart a course and resolve what happens along the road.</p>
+          </header>
+          <div class="screen-grid travel-grid">
+            <section class="panel">
+              <p class="current-zone"><strong>Current Location:</strong> <span id="travelCurrentZone">-</span></p>
+              <label for="travelDestinationSelect">Destination</label>
+              <select id="travelDestinationSelect"></select>
+              <p id="travelDestinationDescription" class="description"></p>
+              <div class="focus-group" role="group" aria-label="Travel focus">
+                <span class="focus-label">Travel Focus</span>
+                <div class="focus-options" id="travelFocusOptions">
+                  <button type="button" data-focus="balanced" class="active">Balanced</button>
+                  <button type="button" data-focus="gathering">Gathering</button>
+                  <button type="button" data-focus="combat">Hunting</button>
+                </div>
+              </div>
+              <div class="button-row">
+                <button id="beginTravelButton" type="button">Begin Journey</button>
+                <button id="travelAdvanceButton" type="button">Advance Turn</button>
+                <button id="cancelTravelButton" type="button">Cancel Journey</button>
+              </div>
+              <div id="travelStatus" class="travel-status"></div>
+            </section>
+            <section class="panel">
+              <h3>Route Notes</h3>
+              <ul id="travelDestinationMeta" class="bullet-list"></ul>
+              <h3>Highlights</h3>
+              <ul id="travelDestinationHighlights" class="bullet-list"></ul>
+              <h3>Threat Assessment</h3>
+              <ul id="travelDestinationThreats" class="bullet-list"></ul>
+              <div class="progress-container">
+                <span>Journey Progress</span>
+                <div class="progress-bar">
+                  <div id="travelProgressBar" class="progress-fill"></div>
+                </div>
+              </div>
+              <h3>Recent Travel Events</h3>
+              <div id="travelEventLog" class="log-entries"></div>
+            </section>
           </div>
-          <div class="screen-column">
-            <h3>Available Gatherables</h3>
-            <ul id="professionGatherables" class="bullet-list"></ul>
-            <h3>Crafting Recipes</h3>
-            <div id="professionRecipes" class="list-grid"></div>
+        </section>
+
+        <section id="screen-trade" class="main-screen" aria-labelledby="tradeTitle">
+          <header class="screen-header">
+            <h2 id="tradeTitle">Trade</h2>
+            <p class="screen-subtitle">Buy and sell goods across the realm.</p>
+          </header>
+          <div class="screen-grid">
+            <section class="panel">
+              <p class="current-zone"><strong>Current Market:</strong> <span id="tradingCurrentZone">-</span></p>
+              <label for="merchantSelect">Merchant</label>
+              <select id="merchantSelect"></select>
+              <div class="button-row">
+                <button id="refreshMerchantButton" type="button">Refresh Stock</button>
+              </div>
+              <div id="merchantInfo" class="details-card"></div>
+            </section>
+            <section class="panel">
+              <h3>Shop Inventory</h3>
+              <div id="merchantInventory" class="list-grid"></div>
+              <h3>Sellable Goods</h3>
+              <div id="sellInventory" class="list-grid"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="screen-town" class="main-screen" aria-labelledby="townTitle">
+          <header class="screen-header">
+            <h2 id="townTitle">Town</h2>
+            <p class="screen-subtitle">Meet locals, gather rumours, and seek new quests.</p>
+          </header>
+          <div class="screen-grid">
+            <section class="panel">
+              <p class="current-zone"><strong>Current Settlement:</strong> <span id="townCurrentZone">-</span></p>
+              <label for="npcSelect">Residents</label>
+              <select id="npcSelect"></select>
+              <div class="button-row">
+                <button id="talkToNpcButton" type="button">Talk</button>
+                <button id="requestQuestButton" type="button">Request Quest</button>
+              </div>
+            </section>
+            <section class="panel">
+              <h3>Resident Details</h3>
+              <div id="npcDetails" class="details-card"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="screen-quests" class="main-screen" aria-labelledby="questsTitle">
+          <header class="screen-header">
+            <h2 id="questsTitle">Quest Log</h2>
+            <p class="screen-subtitle">Track your missions and review the adventure log.</p>
+          </header>
+          <div class="screen-grid quest-grid">
+            <section class="panel">
+              <div id="questLogContent"></div>
+            </section>
+            <section class="panel">
+              <h3>Adventure Log</h3>
+              <div id="logEntries" class="log-entries"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="combatScreen" class="combat-screen" aria-live="polite" aria-hidden="true">
+    <div class="combat-container">
+      <header class="combat-header">
+        <h2>Combat Encounter</h2>
+        <p class="combat-subtitle">Resolve the clash before moving on.</p>
+      </header>
+      <div class="combat-content">
+        <div class="combat-column">
+          <p class="current-zone"><strong>Current Region:</strong> <span id="combatCurrentZone">-</span></p>
+          <div id="combatActions" class="combat-actions">
+            <button id="combatStrikeButton" type="button">Strike</button>
+            <button id="combatAbilityButton" type="button">Ability</button>
+            <button id="combatGuardButton" type="button">Guard</button>
+            <button id="combatFleeButton" type="button">Attempt Flee</button>
           </div>
         </div>
-      </section>
-      <section class="log-panel" aria-live="polite">
-        <h2>Adventure Log</h2>
-        <div id="logEntries" class="log-entries"></div>
-      </section>
-    </main>
+        <div class="combat-column">
+          <h3>Enemy Intel</h3>
+          <div id="enemyDetails" class="details-card"></div>
+          <h3>Battle Status</h3>
+          <div id="combatStatus" class="details-card"></div>
+          <h3>Battle Log</h3>
+          <div class="details-card combat-log">
+            <div id="combatLog" class="log-entries"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="newGameModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="newGameTitle">
@@ -297,16 +282,6 @@
         <button class="close-button" type="button" data-close="inventoryPanel" aria-label="Close inventory">×</button>
       </header>
       <div id="inventoryList" class="list-grid"></div>
-    </div>
-  </div>
-
-  <div id="questLogPanel" class="overlay-panel" aria-hidden="true">
-    <div class="overlay-content">
-      <header>
-        <h2>Quest Log</h2>
-        <button class="close-button" type="button" data-close="questLogPanel" aria-label="Close quest log">×</button>
-      </header>
-      <div id="questLogContent"></div>
     </div>
   </div>
 
