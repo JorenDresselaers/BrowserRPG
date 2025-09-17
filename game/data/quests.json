@@ -1,0 +1,93 @@
+[
+  {
+    "id": "emberguard_watch",
+    "name": "Stoke the Watchfires",
+    "giverId": "sentinel_lyra",
+    "summary": "Assist the Emberguard in defending the glade from roaming threats.",
+    "description": "Sentinel Lyra has asked you to cull the emberspawn near the wall and report back with news of the threat.",
+    "objectives": [
+      {
+        "id": "cull_whelps",
+        "description": "Defeat Ember Whelps near the Ember Beacon.",
+        "type": "kill",
+        "target": "ember_whelp",
+        "count": 3
+      },
+      {
+        "id": "report_lyra",
+        "description": "Report back to Sentinel Lyra.",
+        "type": "talk",
+        "target": "sentinel_lyra",
+        "count": 1
+      }
+    ],
+    "rewards": {
+      "xp": 150,
+      "gold": 12,
+      "items": ["healing_potion"]
+    }
+  },
+  {
+    "id": "arcanists_request",
+    "name": "Arcane Residue",
+    "giverId": "stormcaller_ivra",
+    "summary": "Collect storm-touched reagents for Stormcaller Ivra's research.",
+    "description": "Ivra seeks components that still hum with latent magic. Gather them from across the Shiverpeak Expanse.",
+    "objectives": [
+      {
+        "id": "gather_essence",
+        "description": "Collect Storm Essence from glacial wisps.",
+        "type": "collect",
+        "target": "storm_essence",
+        "count": 2
+      },
+      {
+        "id": "deliver_ivra",
+        "description": "Deliver the reagents to Stormcaller Ivra.",
+        "type": "talk",
+        "target": "stormcaller_ivra",
+        "count": 1
+      }
+    ],
+    "rewards": {
+      "xp": 260,
+      "gold": 28,
+      "items": ["ember_staff"]
+    }
+  },
+  {
+    "id": "void_research",
+    "name": "Echoes of the Void",
+    "giverId": "archivist_mira",
+    "summary": "Map the shifting catacombs and banish the revenant leading the incursions.",
+    "description": "Archivist Mira needs detailed notes from within the Umbral Catacombs to stem the void's advance.",
+    "objectives": [
+      {
+        "id": "chart_catacombs",
+        "description": "Explore the Umbral Catacombs for rift anchors.",
+        "type": "dungeon",
+        "target": "umbral_catacombs",
+        "count": 1
+      },
+      {
+        "id": "slay_revenant",
+        "description": "Defeat the Void Revenant.",
+        "type": "kill",
+        "target": "void_revenant",
+        "count": 1
+      },
+      {
+        "id": "report_mira",
+        "description": "Report back to Archivist Mira.",
+        "type": "talk",
+        "target": "archivist_mira",
+        "count": 1
+      }
+    ],
+    "rewards": {
+      "xp": 420,
+      "gold": 62,
+      "items": ["shadow_daggers", "warden_insignia"]
+    }
+  }
+]

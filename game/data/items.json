@@ -1,0 +1,214 @@
+[
+  {
+    "id": "rusty_sword",
+    "name": "Rusty Sword",
+    "type": "weapon",
+    "rarity": "common",
+    "description": "An old blade with enough bite to get a recruit started.",
+    "stats": { "attack": 4 },
+    "value": 3,
+    "tags": ["starter"]
+  },
+  {
+    "id": "training_shield",
+    "name": "Training Shield",
+    "type": "off-hand",
+    "rarity": "common",
+    "description": "A dented shield that still knows how to deflect a blow.",
+    "stats": { "armor": 6 },
+    "value": 4,
+    "tags": ["starter"]
+  },
+  {
+    "id": "scout_bow",
+    "name": "Scout's Bow",
+    "type": "weapon",
+    "rarity": "common",
+    "description": "A light bow favored by rangers on patrol.",
+    "stats": { "attack": 5 },
+    "value": 5,
+    "tags": ["starter"]
+  },
+  {
+    "id": "initiate_daggers",
+    "name": "Initiate's Daggers",
+    "type": "weapon",
+    "rarity": "common",
+    "description": "Balanced blades for those who prefer shadows to sunlight.",
+    "stats": { "attack": 5 },
+    "value": 5,
+    "tags": ["starter"]
+  },
+  {
+    "id": "menders_tome",
+    "name": "Mender's Tome",
+    "type": "weapon",
+    "rarity": "common",
+    "description": "A worn tome filled with luminous prayers.",
+    "stats": { "spellPower": 5 },
+    "value": 6,
+    "tags": ["starter"]
+  },
+  {
+    "id": "focus_crystal",
+    "name": "Focus Crystal",
+    "type": "off-hand",
+    "rarity": "common",
+    "description": "A crystal that amplifies arcane focus when held.",
+    "stats": { "spellPower": 3 },
+    "value": 4
+  },
+  {
+    "id": "leather_vest",
+    "name": "Leather Vest",
+    "type": "armor",
+    "rarity": "common",
+    "description": "Toughened hide that offers nimble protection.",
+    "stats": { "armor": 5 },
+    "value": 4
+  },
+  {
+    "id": "acolyte_robes",
+    "name": "Acolyte Robes",
+    "type": "armor",
+    "rarity": "common",
+    "description": "Threadbare robes woven with faint enchantments.",
+    "stats": { "armor": 3, "mana": 10 },
+    "value": 4
+  },
+  {
+    "id": "healing_potion",
+    "name": "Healing Draught",
+    "type": "consumable",
+    "rarity": "common",
+    "description": "Restores a portion of vitality when quaffed.",
+    "effect": { "health": 40 },
+    "value": 6
+  },
+  {
+    "id": "mana_potion",
+    "name": "Sapphire Phial",
+    "type": "consumable",
+    "rarity": "common",
+    "description": "A glittering potion that refills arcane reserves.",
+    "effect": { "mana": 35 },
+    "value": 6
+  },
+  {
+    "id": "ember_leaf",
+    "name": "Emberleaf",
+    "type": "material",
+    "rarity": "common",
+    "description": "A fiery herb that grows only in the emberlit glades.",
+    "value": 2,
+    "tags": ["herbalism"]
+  },
+  {
+    "id": "bronze_ore",
+    "name": "Bronze Ore",
+    "type": "material",
+    "rarity": "common",
+    "description": "Chunks of ore streaked with metallic shimmer.",
+    "value": 2,
+    "tags": ["mining"]
+  },
+  {
+    "id": "ember_coal",
+    "name": "Ember Coal",
+    "type": "material",
+    "rarity": "uncommon",
+    "description": "A smoldering chunk harvested from ember spirits.",
+    "value": 5,
+    "tags": ["mining"]
+  },
+  {
+    "id": "spring_water",
+    "name": "Springwater Flask",
+    "type": "material",
+    "rarity": "common",
+    "description": "Crystal-clear water bottled from distant peaks.",
+    "value": 1,
+    "tags": ["alchemy"]
+  },
+  {
+    "id": "ember_scale",
+    "name": "Ember Scale",
+    "type": "material",
+    "rarity": "uncommon",
+    "description": "A scale that shimmers with residual heat.",
+    "value": 7,
+    "tags": ["loot"]
+  },
+  {
+    "id": "glimmer_silk",
+    "name": "Glimmer Silk",
+    "type": "material",
+    "rarity": "uncommon",
+    "description": "Silk that refracts the faintest light in prismatic hues.",
+    "value": 6,
+    "tags": ["tailoring"]
+  },
+  {
+    "id": "storm_essence",
+    "name": "Storm Essence",
+    "type": "material",
+    "rarity": "rare",
+    "description": "A vial of lightning captured from tempest elementals.",
+    "value": 12,
+    "tags": ["enchanting"]
+  },
+  {
+    "id": "luminous_thread",
+    "name": "Luminous Thread",
+    "type": "material",
+    "rarity": "uncommon",
+    "description": "Thread spun from the cocoons of glowmoths.",
+    "value": 5,
+    "tags": ["tailoring"]
+  },
+  {
+    "id": "bronze_sword",
+    "name": "Bronze Longsword",
+    "type": "weapon",
+    "rarity": "uncommon",
+    "description": "A newly forged blade balanced for seasoned fighters.",
+    "stats": { "attack": 9 },
+    "value": 12
+  },
+  {
+    "id": "ember_staff",
+    "name": "Emberweave Staff",
+    "type": "weapon",
+    "rarity": "uncommon",
+    "description": "Wood wrapped in emberweave that channels raw flame.",
+    "stats": { "spellPower": 10 },
+    "value": 14
+  },
+  {
+    "id": "shadow_daggers",
+    "name": "Shadow Daggers",
+    "type": "weapon",
+    "rarity": "uncommon",
+    "description": "Daggers quenched in the void, eager for backstabs.",
+    "stats": { "attack": 10 },
+    "value": 15
+  },
+  {
+    "id": "rejuvenation_potion",
+    "name": "Rejuvenation Potion",
+    "type": "consumable",
+    "rarity": "uncommon",
+    "description": "A tonic that revitalizes both body and spirit.",
+    "effect": { "health": 40, "mana": 25 },
+    "value": 12
+  },
+  {
+    "id": "warden_insignia",
+    "name": "Warden's Insignia",
+    "type": "trinket",
+    "rarity": "rare",
+    "description": "A badge of honor granted for defending Emberglade Watch.",
+    "stats": { "armor": 4, "attack": 4 },
+    "value": 25
+  }
+]
