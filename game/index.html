@@ -9,7 +9,10 @@
 <body>
   <div id="loading" class="loading">Loading world data...</div>
   <div id="app" class="app hidden" aria-live="polite">
-    <aside class="player-panel" aria-label="Player information">
+    <aside id="playerPanel" class="player-panel" aria-label="Player information" tabindex="-1">
+      <button id="playerPanelClose" class="player-panel-close" type="button" aria-label="Close player panel">
+        ×
+      </button>
       <header class="player-header">
         <h1>Ember Sigil</h1>
         <p class="tagline">A data-driven browser RPG prototype</p>
@@ -72,8 +75,13 @@
         <ul id="playerEquipment"></ul>
       </section>
     </aside>
+    <div id="playerPanelBackdrop" class="player-panel-backdrop" aria-hidden="true" role="presentation"></div>
     <main class="main-area">
       <nav class="activity-tabs" id="activityTabs" aria-label="Gameplay activities">
+        <button id="playerPanelToggle" class="player-panel-toggle" type="button" aria-controls="playerPanel" aria-expanded="false" aria-label="Toggle player panel">
+          <span class="icon" aria-hidden="true">☰</span>
+          <span class="label">Player Menu</span>
+        </button>
         <button data-screen="travel" type="button">Travel</button>
         <button class="active" data-screen="exploration" type="button">Exploration</button>
         <button data-screen="dungeons" type="button">Dungeons</button>

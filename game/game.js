@@ -44,6 +44,10 @@
     playerNameInput: document.getElementById('playerNameInput'),
     classSelect: document.getElementById('classSelect'),
     classDetails: document.getElementById('classDetails'),
+    playerPanel: document.getElementById('playerPanel'),
+    playerPanelToggle: document.getElementById('playerPanelToggle'),
+    playerPanelClose: document.getElementById('playerPanelClose'),
+    playerPanelBackdrop: document.getElementById('playerPanelBackdrop'),
     inventoryToggle: document.getElementById('inventoryToggle'),
     questLogToggle: document.getElementById('questLogToggle'),
     restButton: document.getElementById('restButton'),
@@ -191,6 +195,7 @@
   function initialiseUI() {
     elements.loading.classList.add('hidden');
     elements.app.classList.remove('hidden');
+    setupMobileLayout();
     setupNewGameForm();
     setupNavigation();
     setupOverlays();
@@ -367,6 +372,82 @@
       showScreen(button.dataset.screen);
     });
     updateNavigationLocks();
+  }
+
+  function setupMobileLayout() {
+    const { playerPanel, playerPanelToggle, playerPanelClose, playerPanelBackdrop, app } = elements;
+    if (!playerPanel || !playerPanelToggle || !playerPanelBackdrop || !app) {
+      return;
+    }
+
+    const mobileQuery = window.matchMedia('(max-width: 960px)');
+
+    const closePanel = () => {
+      app.classList.remove('player-panel-open');
+      document.body.classList.remove('no-scroll');
+      playerPanelBackdrop.setAttribute('aria-hidden', 'true');
+      playerPanelToggle.setAttribute('aria-expanded', 'false');
+      if (mobileQuery.matches) {
+        playerPanel.setAttribute('aria-hidden', 'true');
+      } else {
+        playerPanel.removeAttribute('aria-hidden');
+      }
+    };
+
+    const openPanel = () => {
+      if (!mobileQuery.matches) return;
+      app.classList.add('player-panel-open');
+      document.body.classList.add('no-scroll');
+      playerPanelBackdrop.setAttribute('aria-hidden', 'false');
+      playerPanelToggle.setAttribute('aria-expanded', 'true');
+      playerPanel.removeAttribute('aria-hidden');
+      requestAnimationFrame(() => playerPanel.focus({ preventScroll: true }));
+    };
+
+    const togglePanel = () => {
+      if (app.classList.contains('player-panel-open')) {
+        closePanel();
+      } else {
+        openPanel();
+      }
+    };
+
+    playerPanelToggle.addEventListener('click', () => {
+      if (mobileQuery.matches) {
+        togglePanel();
+      }
+    });
+
+    if (playerPanelClose) {
+      playerPanelClose.addEventListener('click', closePanel);
+    }
+
+    playerPanelBackdrop.addEventListener('click', closePanel);
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && app.classList.contains('player-panel-open')) {
+        closePanel();
+      }
+    });
+
+    const handleViewportChange = (event) => {
+      if (event.matches) {
+        closePanel();
+      } else {
+        app.classList.remove('player-panel-open');
+        document.body.classList.remove('no-scroll');
+        playerPanelBackdrop.setAttribute('aria-hidden', 'true');
+        playerPanel.removeAttribute('aria-hidden');
+        playerPanelToggle.setAttribute('aria-expanded', 'true');
+      }
+    };
+
+    if (typeof mobileQuery.addEventListener === 'function') {
+      mobileQuery.addEventListener('change', handleViewportChange);
+    } else if (typeof mobileQuery.addListener === 'function') {
+      mobileQuery.addListener(handleViewportChange);
+    }
+    handleViewportChange(mobileQuery);
   }
 
   function updateNavigationLocks() {

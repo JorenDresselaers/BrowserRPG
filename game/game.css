@@ -28,6 +28,10 @@ body {
   min-height: 100vh;
 }
 
+body.no-scroll {
+  overflow: hidden;
+}
+
 .loading {
   position: fixed;
   inset: 0;
@@ -48,6 +52,12 @@ body {
   display: flex;
   min-height: 100vh;
   width: 100%;
+}
+
+.player-panel-toggle,
+.player-panel-close,
+.player-panel-backdrop {
+  display: none;
 }
 
 .player-panel {
@@ -849,16 +859,222 @@ button:disabled {
 @media (max-width: 960px) {
   .app {
     flex-direction: column;
+    position: relative;
+    min-height: 100vh;
   }
 
   .player-panel {
-    position: relative;
-    width: 100%;
-    max-height: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(320px, 85vw);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    padding: 2.25rem 1.25rem 1.75rem;
+    border-right: 1px solid var(--panel-border);
+    border-radius: 0 20px 20px 0;
+    z-index: 90;
+    box-shadow: 12px 0 30px rgba(0, 0, 0, 0.45);
+  }
+
+  .app.player-panel-open .player-panel {
+    transform: translateX(0);
+  }
+
+  .player-panel-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    border: none;
+    background: rgba(15, 23, 42, 0.45);
+    color: var(--muted);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .player-panel-close:hover,
+  .player-panel-close:focus-visible {
+    color: var(--accent);
+    background: rgba(148, 163, 184, 0.2);
+  }
+
+  .player-panel-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex: 0 0 auto;
+    padding: 0.65rem 1.1rem;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.18);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    color: var(--text);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    box-shadow: var(--shadow);
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    margin-right: 0.35rem;
+    backdrop-filter: blur(10px);
+    background-image: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.15));
+    border-color: rgba(59, 130, 246, 0.45);
+  }
+
+  .player-panel-toggle .icon {
+    font-size: 1.15rem;
+  }
+
+  .activity-tabs {
+    overflow-x: auto;
+    padding: 0.65rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .activity-tabs button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .activity-tabs::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .activity-tabs::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 999px;
+  }
+
+  .player-panel-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 12, 19, 0.75);
+    z-index: 80;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .app.player-panel-open .player-panel-backdrop {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .main-area {
     padding-bottom: 4rem;
+  }
+
+  .screen {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+
+  .screen-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .button-row {
+    flex-direction: column;
+  }
+
+  .log-panel {
+    margin: 0 1rem 1.5rem;
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    font-size: 15px;
+  }
+
+  .player-panel {
+    width: min(320px, 92vw);
+    padding: 2.5rem 1.1rem 1.5rem;
+  }
+
+  .player-panel-toggle {
+    padding: 0.6rem 0.95rem;
+  }
+
+  .player-summary,
+  .player-actions,
+  .player-stats,
+  .player-abilities,
+  .player-professions,
+  .player-equipment {
+    padding: 0.85rem;
+  }
+
+  .screen {
+    padding: 1.15rem 0.9rem 1.35rem;
+  }
+
+  .screen-column {
+    padding: 1rem;
+  }
+
+  .list-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .log-panel {
+    margin: 0 0.75rem 1.25rem;
+    padding: 1.05rem 1.15rem;
+  }
+}
+
+@media (max-width: 520px) {
+  :root {
+    font-size: 14px;
+  }
+
+  .player-panel {
+    width: min(360px, 94vw);
+  }
+
+  .player-panel-toggle {
+    padding: 0.55rem 0.75rem;
+    gap: 0.35rem;
+  }
+
+  .player-panel-toggle .label {
+    display: none;
+  }
+
+  .player-panel-toggle .icon {
+    font-size: 1.2rem;
+  }
+
+  .activity-tabs {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .screen {
+    padding: 1rem 0.75rem 1.25rem;
+  }
+
+  .button-row {
+    gap: 0.6rem;
+  }
+
+  .player-actions {
+    flex-direction: column;
+  }
+
+  .player-actions button {
+    width: 100%;
+  }
+
+  .log-panel {
+    margin: 0 0.6rem 1.25rem;
   }
 }
 
