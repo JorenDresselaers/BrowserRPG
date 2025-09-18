@@ -6,6 +6,7 @@
     "rarity": "common",
     "description": "An old blade with enough bite to get a recruit started.",
     "stats": { "attack": 4 },
+    "classes": ["warden", "templar"],
     "value": 3,
     "tags": ["starter"]
   },
@@ -16,6 +17,7 @@
     "rarity": "common",
     "description": "A dented shield that still knows how to deflect a blow.",
     "stats": { "armor": 6 },
+    "classes": ["warden", "templar"],
     "value": 4,
     "tags": ["starter"]
   },
@@ -26,6 +28,7 @@
     "rarity": "common",
     "description": "A light bow favored by rangers on patrol.",
     "stats": { "attack": 5 },
+    "classes": ["ranger"],
     "value": 5,
     "tags": ["starter"]
   },
@@ -36,6 +39,7 @@
     "rarity": "common",
     "description": "Balanced blades for those who prefer shadows to sunlight.",
     "stats": { "attack": 5 },
+    "classes": ["ranger"],
     "value": 5,
     "tags": ["starter"]
   },
@@ -46,6 +50,7 @@
     "rarity": "common",
     "description": "A worn tome filled with luminous prayers.",
     "stats": { "spellPower": 5 },
+    "classes": ["arcanist", "templar"],
     "value": 6,
     "tags": ["starter"]
   },
@@ -56,6 +61,7 @@
     "rarity": "common",
     "description": "A crystal that amplifies arcane focus when held.",
     "stats": { "spellPower": 3 },
+    "classes": ["arcanist", "templar"],
     "value": 4
   },
   {
@@ -65,6 +71,7 @@
     "rarity": "common",
     "description": "Toughened hide that offers nimble protection.",
     "stats": { "armor": 5 },
+    "classes": ["warden", "ranger"],
     "value": 4
   },
   {
@@ -74,6 +81,7 @@
     "rarity": "common",
     "description": "Threadbare robes woven with faint enchantments.",
     "stats": { "armor": 3, "mana": 10 },
+    "classes": ["arcanist", "templar"],
     "value": 4
   },
   {
@@ -173,6 +181,7 @@
     "rarity": "uncommon",
     "description": "A newly forged blade balanced for seasoned fighters.",
     "stats": { "attack": 9 },
+    "classes": ["warden", "templar"],
     "value": 12
   },
   {
@@ -182,6 +191,7 @@
     "rarity": "uncommon",
     "description": "Wood wrapped in emberweave that channels raw flame.",
     "stats": { "spellPower": 10 },
+    "classes": ["arcanist"],
     "value": 14
   },
   {
@@ -191,6 +201,7 @@
     "rarity": "uncommon",
     "description": "Daggers quenched in the void, eager for backstabs.",
     "stats": { "attack": 10 },
+    "classes": ["ranger"],
     "value": 15
   },
   {
@@ -209,6 +220,7 @@
     "rarity": "rare",
     "description": "A badge of honor granted for defending Emberglade Watch.",
     "stats": { "armor": 4, "attack": 4 },
+    "classes": ["warden", "templar"],
     "value": 25
   }
 ]
