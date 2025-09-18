@@ -92,6 +92,26 @@
               <ul id="playerEquipment"></ul>
             </section>
           </div>
+          <section class="panel talent-panel">
+            <header class="panel-header">
+              <h3>Talents</h3>
+              <p class="panel-subtitle">Spend talent points to specialize your hero.</p>
+            </header>
+            <div class="talent-summary">
+              <div class="talent-summary__item">
+                <span class="label">Discipline</span>
+                <span class="value" id="talentTreeName">-</span>
+              </div>
+              <div class="talent-summary__item">
+                <span class="label">Points Available</span>
+                <span class="value" id="talentPoints">0</span>
+              </div>
+            </div>
+            <div id="talentTree" class="talent-tree"></div>
+            <div id="talentFeedback" class="screen-feedback" role="status" aria-live="polite">
+              Spend talent points to unlock new strengths for your hero.
+            </div>
+          </section>
           <section class="panel professions-panel">
             <header class="panel-header">
               <h3>Professions</h3>
