@@ -65,6 +65,7 @@
           <button data-screen="trade" type="button">Trade</button>
           <button data-screen="town" type="button">Town</button>
           <button data-screen="quests" type="button">Quest Log</button>
+          <button data-screen="log" type="button">Adventure Log</button>
         </nav>
         <div class="sidebar-actions">
           <button id="inventoryToggle" type="button">Inventory</button>
@@ -228,17 +229,23 @@
         <section id="screen-quests" class="main-screen" aria-labelledby="questsTitle">
           <header class="screen-header">
             <h2 id="questsTitle">Quest Log</h2>
-            <p class="screen-subtitle">Track your missions and review the adventure log.</p>
+            <p class="screen-subtitle">Track your missions and progress.</p>
           </header>
-          <div class="screen-grid quest-grid">
+          <div class="screen-grid">
             <section class="panel">
               <div id="questLogContent"></div>
             </section>
-            <section class="panel">
-              <h3>Adventure Log</h3>
-              <div id="logEntries" class="log-entries"></div>
-            </section>
           </div>
+        </section>
+
+        <section id="screen-log" class="main-screen" aria-labelledby="logTitle">
+          <header class="screen-header">
+            <h2 id="logTitle">Adventure Log</h2>
+            <p class="screen-subtitle">Review the chronicle of your hero's journey.</p>
+          </header>
+          <section class="panel">
+            <div id="logEntries" class="log-entries" role="log" aria-live="polite"></div>
+          </section>
         </section>
       </main>
     </div>
@@ -304,6 +311,14 @@
       </header>
       <div id="inventoryList" class="list-grid"></div>
     </div>
+  </div>
+
+  <div id="logOverlay" class="log-overlay" aria-hidden="true" aria-live="polite">
+    <header class="log-overlay-header">
+      <h2>Adventure Log</h2>
+      <button id="logOverlayClose" class="close-button" type="button" aria-label="Hide adventure log overlay">×</button>
+    </header>
+    <div id="logOverlayEntries" class="log-entries" role="log"></div>
   </div>
 
   <template id="inventoryItemTemplate">

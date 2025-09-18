@@ -75,7 +75,8 @@
     combat: createDefaultCombatState(),
     travel: createDefaultTravelState(),
     logs: [],
-    feedback: createDefaultFeedbackState()
+    feedback: createDefaultFeedbackState(),
+    logOverlayOpen: false
   };
 
   const elements = {
@@ -155,7 +156,10 @@
     inventoryItemTemplate: document.getElementById('inventoryItemTemplate'),
     recipeTemplate: document.getElementById('recipeTemplate'),
     combatScreen: document.getElementById('combatScreen'),
-    townCurrentZone: document.getElementById('townCurrentZone')
+    townCurrentZone: document.getElementById('townCurrentZone'),
+    logOverlay: document.getElementById('logOverlay'),
+    logOverlayEntries: document.getElementById('logOverlayEntries'),
+    logOverlayClose: document.getElementById('logOverlayClose')
   };
 
   elements.mainScreens = Array.from(document.querySelectorAll('.main-screen'));
@@ -196,7 +200,8 @@
     travel: renderTravelScreen,
     trade: renderTradeScreen,
     town: renderTownScreen,
-    quests: renderQuestScreen
+    quests: renderQuestScreen,
+    log: renderAdventureLogScreen
   };
 
   loadWorldData();
@@ -305,6 +310,7 @@
     } else {
       addLog(`Welcome back, ${state.player.name}!`, logTypes.SUCCESS);
     }
+    renderLog();
   }
 
   function setupNewGameForm() {
@@ -484,6 +490,7 @@
 
   function setupOverlays() {
     elements.inventoryToggle?.addEventListener('click', () => toggleOverlay(elements.inventoryPanel, true));
+    elements.logOverlayClose?.addEventListener('click', () => hideLogOverlay());
     overlayToggleButtons.forEach((button) => {
       button.addEventListener('click', () => {
         const targetId = button.dataset.close;
@@ -494,6 +501,7 @@
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         [elements.inventoryPanel].forEach((panel) => toggleOverlay(panel, false));
+        hideLogOverlay();
       }
     });
     elements.inventoryList.addEventListener('click', (event) => {
@@ -634,6 +642,9 @@
       addLog('You are locked in combat and cannot switch activities.', logTypes.WARNING);
       return;
     }
+    if (screenId === 'log') {
+      state.logOverlayOpen = false;
+    }
     state.currentScreen = screenId;
     state.previousScreen = screenId;
     elements.navButtons.forEach((button) => {
@@ -643,6 +654,7 @@
       screen.classList.toggle('active', screen.id === `screen-${screenId}`);
     });
     screenRenderers[screenId]();
+    renderLogOverlay();
     updateNavigationLocks();
   }
 
@@ -655,6 +667,7 @@
     renderTradeScreen();
     renderTownScreen();
     renderQuestScreen();
+    renderLog();
     renderCombatState();
     renderInventory();
     scheduleSave();
@@ -2533,6 +2546,9 @@
 
   function renderQuestScreen() {
     updateQuestLogView();
+  }
+
+  function renderAdventureLogScreen() {
     renderLog();
   }
 
@@ -2620,10 +2636,35 @@
   }
 
   function renderLog() {
-    elements.logEntries.innerHTML = state.logs
-      .slice(-40)
-      .map((entry) => `<div class=\"log-entry ${entry.type}\">${entry.message}</div>`)
-      .join('');
+    renderLogEntries(elements.logEntries, state.logs.slice(-100));
+    renderLogOverlay();
+  }
+
+  function renderLogEntries(container, entries) {
+    if (!container) return;
+    container.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    entries.forEach((entry) => {
+      const item = document.createElement('div');
+      item.className = `log-entry ${entry.type}`;
+      item.textContent = entry.message;
+      fragment.appendChild(item);
+    });
+    container.appendChild(fragment);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function renderLogOverlay() {
+    if (!elements.logOverlay) return;
+    renderLogEntries(elements.logOverlayEntries, state.logs.slice(-6));
+    const shouldShow = Boolean(state.logOverlayOpen && state.currentScreen !== 'log' && state.logs.length);
+    elements.logOverlay.classList.toggle('visible', shouldShow);
+    elements.logOverlay.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+  }
+
+  function hideLogOverlay() {
+    state.logOverlayOpen = false;
+    renderLogOverlay();
   }
 
   function addLog(message, type = logTypes.INFO) {
@@ -2631,12 +2672,10 @@
     if (state.logs.length > 100) {
       state.logs.splice(0, state.logs.length - 100);
     }
-    if (!elements.logEntries) return;
-    const entry = document.createElement('div');
-    entry.className = `log-entry ${type}`;
-    entry.textContent = message;
-    elements.logEntries.appendChild(entry);
-    elements.logEntries.scrollTop = elements.logEntries.scrollHeight;
+    if (state.currentScreen !== 'log') {
+      state.logOverlayOpen = true;
+    }
+    renderLog();
     scheduleSave();
   }
 
@@ -2896,6 +2935,7 @@
       ? saved.currentScreen
       : 'character';
     state.logs = Array.isArray(saved.logs) ? saved.logs.slice(-100) : [];
+    state.logOverlayOpen = false;
     Object.assign(state.selected, saved.selected || {});
     const loadedTravel = saved.travel && typeof saved.travel === 'object' ? saved.travel : {};
     Object.assign(state.travel, createDefaultTravelState(), loadedTravel);
