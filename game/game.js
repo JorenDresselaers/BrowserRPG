@@ -118,6 +118,20 @@
     DANGER: 'danger'
   };
 
+  const equipmentSlotMap = {
+    weapon: 'weapon',
+    'off-hand': 'offHand',
+    armor: 'armor',
+    trinket: 'trinket'
+  };
+
+  const equipmentSlotLabels = {
+    weapon: 'Weapon',
+    offHand: 'Off-hand',
+    armor: 'Armor',
+    trinket: 'Trinket'
+  };
+
   const screenRenderers = {
     character: renderCharacterScreen,
     travel: renderTravelScreen,
@@ -376,6 +390,11 @@
       }
     });
     elements.inventoryList.addEventListener('click', (event) => {
+      const equipButton = event.target.closest('[data-equip-item]');
+      if (equipButton && state.player) {
+        equipItem(equipButton.dataset.equipItem);
+        return;
+      }
       const useButton = event.target.closest('[data-use-item]');
       if (!useButton || !state.player) return;
       useItem(useButton.dataset.useItem);
@@ -1669,7 +1688,7 @@
         return `
           <article class=\"card\">
             <header class=\"card-header\">${item.name}</header>
-            <p class=\"card-body\">${item.description}</p>
+            <div class=\"card-body\">${item.description}</div>
             <div class=\"card-footer\">
               <span>${price} gold</span>
               <button type=\"button\" data-buy-item=\"${entry.itemId}\">Buy</button>
@@ -1694,7 +1713,7 @@
         return `
           <article class=\"card\">
             <header class=\"card-header\">${item.name} ×${qty}</header>
-            <p class=\"card-body\">${item.description}</p>
+            <div class=\"card-body\">${item.description}</div>
             <div class=\"card-footer\">
               <span>Sell for ${price} gold</span>
               <button type=\"button\" data-sell-item=\"${itemId}\">Sell</button>
@@ -1741,7 +1760,7 @@
         return `
           <article class=\"card\">
             <header class=\"card-header\">${item.name}</header>
-            <p class=\"card-body\">${recipe.description || item.description}</p>
+            <div class=\"card-body\">${recipe.description || item.description}</div>
             <div class=\"card-footer\">
               <span>Requires: ${requirements || 'N/A'}</span>
               <button type=\"button\" data-craft-item=\"${recipe.itemId}\">Craft</button>
@@ -1837,22 +1856,11 @@
   function autoEquip(player, itemId) {
     const item = getItem(itemId);
     if (!item) return;
-    switch (item.type) {
-      case 'weapon':
-        if (!player.equipment.weapon) player.equipment.weapon = itemId;
-        break;
-      case 'off-hand':
-        if (!player.equipment.offHand) player.equipment.offHand = itemId;
-        break;
-      case 'armor':
-        if (!player.equipment.armor) player.equipment.armor = itemId;
-        break;
-      case 'trinket':
-        if (!player.equipment.trinket) player.equipment.trinket = itemId;
-        break;
-      default:
-        break;
-    }
+    const slot = getEquipmentSlot(item);
+    if (!slot) return;
+    if (player.equipment[slot]) return;
+    if (!canEquipItem(player, item)) return;
+    player.equipment[slot] = itemId;
   }
 
   function renderInventory() {
@@ -1865,15 +1873,71 @@
     const fragment = document.createDocumentFragment();
     entries.forEach(([itemId, qty]) => {
       const item = getItem(itemId);
+      if (!item) return;
       const template = elements.inventoryItemTemplate.content.cloneNode(true);
       const card = template.querySelector('.card');
       const header = template.querySelector('.card-header');
       const body = template.querySelector('.card-body');
       const footer = template.querySelector('.card-footer');
-      header.textContent = `${item.name} ×${qty}`;
-      body.textContent = item.description;
+      header.textContent = '';
+      const title = document.createElement('span');
+      title.textContent = `${item.name} ×${qty}`;
+      header.appendChild(title);
+
+      const slot = getEquipmentSlot(item);
+      const equippedItemId = slot ? state.player.equipment?.[slot] : null;
+      const currentEquippedItem = slot ? getItem(equippedItemId) : null;
+      const isEquipped = Boolean(slot && equippedItemId === itemId);
+
+      if (isEquipped) {
+        const badge = document.createElement('span');
+        badge.className = 'item-tag';
+        badge.textContent = 'Equipped';
+        header.appendChild(badge);
+        card.classList.add('equipped');
+      }
+
+      const bodySections = [`<p>${item.description}</p>`];
+      if (slot) {
+        const slotLabel = equipmentSlotLabels[slot] || toTitle(slot);
+        const classNames = getItemClassNames(item);
+        const classText = classNames.length ? classNames.join(', ') : 'All classes';
+        bodySections.push(
+          `<dl class="item-meta"><div><dt>Slot</dt><dd>${slotLabel}</dd></div><div><dt>Usable by</dt><dd>${classText}</dd></div></dl>`
+        );
+        const statsList = buildItemStatsList(item);
+        if (statsList) {
+          bodySections.push(statsList);
+        }
+        const diffSummary = buildEquipChangeSummary(itemId, item, slot, equippedItemId, currentEquippedItem);
+        if (diffSummary) {
+          bodySections.push(diffSummary);
+        }
+      }
+      body.innerHTML = bodySections.join('');
+
       const value = item.value ? `${item.value} gold` : 'No market value';
-      footer.innerHTML = `<span>${value}</span>`;
+      footer.innerHTML = '';
+      const valueSpan = document.createElement('span');
+      valueSpan.textContent = value;
+      footer.appendChild(valueSpan);
+
+      if (slot) {
+        const equipButton = document.createElement('button');
+        equipButton.type = 'button';
+        equipButton.dataset.equipItem = itemId;
+        if (!canEquipItem(state.player, item)) {
+          equipButton.textContent = 'Cannot equip';
+          equipButton.disabled = true;
+        } else if (isEquipped) {
+          equipButton.textContent = 'Equipped';
+          equipButton.disabled = true;
+        } else {
+          equipButton.textContent = 'Equip';
+        }
+        footer.appendChild(equipButton);
+      }
+
       if (item.type === 'consumable') {
         const useButton = document.createElement('button');
         useButton.type = 'button';
@@ -1885,6 +1949,94 @@
     });
     elements.inventoryList.innerHTML = '';
     elements.inventoryList.appendChild(fragment);
+  }
+
+  function getEquipmentSlot(item) {
+    if (!item?.type) return null;
+    return equipmentSlotMap[item.type] || null;
+  }
+
+  function getItemClassNames(item) {
+    const classIds = Array.isArray(item.classes) ? item.classes : [];
+    if (!classIds.length) return [];
+    return classIds
+      .map((classId) => getClass(classId)?.name || toTitle(classId))
+      .filter(Boolean);
+  }
+
+  function buildItemStatsList(item) {
+    const stats = Object.entries(item.stats || {});
+    if (!stats.length) return '';
+    const rows = stats
+      .map(([stat, value]) => {
+        const sign = value > 0 ? '+' : '';
+        return `<li><span>${toTitle(stat)}</span><span>${sign}${value}</span></li>`;
+      })
+      .join('');
+    return `<ul class="item-stats">${rows}</ul>`;
+  }
+
+  function getEquipmentStatDiffs(newItem, currentItem) {
+    const stats = new Set([
+      ...Object.keys(newItem?.stats || {}),
+      ...Object.keys(currentItem?.stats || {})
+    ]);
+    return Array.from(stats)
+      .map((stat) => ({
+        stat,
+        diff: (newItem?.stats?.[stat] || 0) - (currentItem?.stats?.[stat] || 0)
+      }))
+      .filter(({ diff }) => diff !== 0);
+  }
+
+  function buildEquipChangeSummary(itemId, item, slot, equippedItemId, currentItem) {
+    if (!slot) return '';
+    if (equippedItemId === itemId) {
+      return '<p class="item-diff neutral">Currently equipped</p>';
+    }
+    const diffs = getEquipmentStatDiffs(item, currentItem);
+    if (!diffs.length) {
+      return '<p class="item-diff neutral">If equipped: No change</p>';
+    }
+    const diffClass = diffs.some(({ diff }) => diff < 0) ? 'negative' : 'positive';
+    const summary = diffs
+      .map(({ stat, diff }) => `${toTitle(stat)} ${diff > 0 ? '+' : ''}${diff}`)
+      .join(', ');
+    return `<p class="item-diff ${diffClass}">If equipped: ${summary}</p>`;
+  }
+
+  function canEquipItem(player, item) {
+    const classIds = Array.isArray(item.classes) ? item.classes : [];
+    if (!classIds.length) return true;
+    return classIds.includes(player.classId);
+  }
+
+  function equipItem(itemId) {
+    if (!ensureCanAct('change your equipment')) return;
+    const player = state.player;
+    if (!player) return;
+    const item = getItem(itemId);
+    if (!item) return;
+    const slot = getEquipmentSlot(item);
+    if (!slot) return;
+    if ((player.inventory[itemId] || 0) <= 0) {
+      addLog('You do not have that item in your pack.', logTypes.WARNING);
+      return;
+    }
+    if (!canEquipItem(player, item)) {
+      addLog('Your training does not allow you to wield that equipment.', logTypes.WARNING);
+      return;
+    }
+    player.equipment = player.equipment || { weapon: null, offHand: null, armor: null, trinket: null };
+    if (player.equipment[slot] === itemId) {
+      addLog(`${item.name} is already equipped.`, logTypes.INFO);
+      return;
+    }
+    player.equipment[slot] = itemId;
+    addLog(`You equip ${item.name}.`, logTypes.SUCCESS);
+    renderInventory();
+    updatePlayerPanel();
+    scheduleSave();
   }
 
   function useItem(itemId) {
