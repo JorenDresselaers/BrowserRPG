@@ -13,6 +13,50 @@
   const data = {};
   const dataIndex = {};
 
+  const CAMP_SUPPLIES_ITEM_ID = 'camp_supplies';
+  const TIME_SEGMENTS_PER_DAY = 4;
+  const PASSIVE_HEALTH_REGEN_RATE = 0.05;
+  const PASSIVE_MANA_REGEN_RATE = 0.06;
+
+  const abilityLibrary = {
+    'Shield Slam': {
+      usesPerRest: 3,
+      manaCost: 15,
+      damageMultiplier: 1.1,
+      bonusDamage: 8,
+      defenseMitigation: 0.2,
+      minimumDamage: 8,
+      description: 'A crushing blow that staggers foes with your shield.'
+    },
+    'Twin Arrows': {
+      usesPerRest: 3,
+      manaCost: 14,
+      damageMultiplier: 1.05,
+      bonusDamage: 10,
+      defenseMitigation: 0.18,
+      minimumDamage: 8,
+      description: 'Loose two swift arrows that strike vital points.'
+    },
+    'Lightning Coil': {
+      usesPerRest: 3,
+      manaCost: 18,
+      damageMultiplier: 1.2,
+      bonusDamage: 10,
+      defenseMitigation: 0.12,
+      minimumDamage: 10,
+      description: 'Unleash a spiral of chained lightning.'
+    },
+    'Sunlance': {
+      usesPerRest: 3,
+      manaCost: 16,
+      damageMultiplier: 1.15,
+      bonusDamage: 9,
+      defenseMitigation: 0.15,
+      minimumDamage: 9,
+      description: 'Call down a spear of radiant flame.'
+    }
+  };
+
   const STORAGE_KEY = 'ember-sigil-save';
   const SAVE_DEBOUNCE_MS = 250;
   let saveTimer = null;
@@ -50,6 +94,8 @@
     playerLevel: document.getElementById('playerLevel'),
     playerXp: document.getElementById('playerXp'),
     playerGold: document.getElementById('playerGold'),
+    adventureDay: document.getElementById('adventureDay'),
+    campSupplies: document.getElementById('campSuppliesValue'),
     healthBar: document.getElementById('healthBar'),
     healthValue: document.getElementById('healthValue'),
     manaBar: document.getElementById('manaBar'),
@@ -391,6 +437,11 @@
       location: {
         zoneId: data.zones[0]?.id || null
       },
+      timeline: {
+        day: 1,
+        segments: 0
+      },
+      abilityUses: {},
       professions: [...(classData.startingProfessions || [])],
       quests: {
         active: [],
@@ -407,6 +458,7 @@
       addQuestToPlayer(player, questId);
     });
     syncResourceCaps(player);
+    resetAbilityUses(player);
     return player;
   }
 
@@ -618,11 +670,19 @@
     const playerClass = getClass(player.classId);
     const maxHealth = getTotalStat(player, 'health');
     const maxMana = getTotalStat(player, 'mana');
+    const timeline = ensureTimeline(player);
+    ensureAbilityState(player);
     elements.playerName.textContent = player.name;
     elements.playerClass.textContent = playerClass?.name || '-';
     elements.playerLevel.textContent = player.level;
     elements.playerXp.textContent = `${player.xp} / ${player.xpToLevel}`;
     elements.playerGold.textContent = `${player.gold}`;
+    if (elements.adventureDay) {
+      elements.adventureDay.textContent = `${timeline.day}`;
+    }
+    if (elements.campSupplies) {
+      elements.campSupplies.textContent = `${player.inventory?.[CAMP_SUPPLIES_ITEM_ID] || 0}`;
+    }
     updateResourceBar(elements.healthBar, elements.healthValue, player.resources.health, maxHealth);
     updateResourceBar(elements.manaBar, elements.manaValue, player.resources.mana, maxMana);
     renderPlayerStats();
@@ -654,9 +714,25 @@
   }
 
   function renderPlayerAbilities() {
-    elements.playerAbilities.innerHTML = (state.player.abilities || [])
-      .map((ability) => `<li>${ability}</li>`)
-      .join('') || '<li>No abilities learned yet.</li>';
+    const abilities = state.player?.abilities || [];
+    if (!abilities.length) {
+      elements.playerAbilities.innerHTML = '<li>No abilities learned yet.</li>';
+      return;
+    }
+    const items = abilities
+      .map((abilityName) => {
+        const definition = getAbilityDefinition(abilityName);
+        const usesPerRest = definition?.usesPerRest;
+        const usesRemaining = getAbilityUsesRemaining(abilityName);
+        const usesLabel = Number.isFinite(usesPerRest)
+          ? `${usesRemaining}/${usesPerRest} uses per rest`
+          : 'At-will';
+        const manaLabel = definition?.manaCost != null ? `${definition.manaCost} mana` : 'mana cost varies';
+        const description = definition?.description ? ` — ${definition.description}` : '';
+        return `<li><strong>${abilityName}</strong> — ${usesLabel}, ${manaLabel}${description}</li>`;
+      })
+      .join('');
+    elements.playerAbilities.innerHTML = items;
   }
 
   function renderPlayerProfessions() {
@@ -920,6 +996,8 @@
         addTravelEvent('The road is quiet as you press on.', logTypes.INFO);
       }
     }
+
+    advanceTime(1);
 
     if (journey.progress >= journey.totalSteps) {
       if (state.combat.active) {
@@ -1212,6 +1290,20 @@
     elements.combatActions.classList.toggle('active', inCombat);
     const player = state.player;
     const enemy = getEnemy(state.combat.enemyId);
+    if (player) {
+      ensureAbilityState(player);
+    }
+    if (elements.combatAbilityButton) {
+      const abilityName = player?.abilities?.[0];
+      const abilityDefinition = abilityName ? getAbilityDefinition(abilityName) : null;
+      const usesRemaining = abilityName ? getAbilityUsesRemaining(abilityName) : Infinity;
+      const usesText = abilityDefinition && Number.isFinite(abilityDefinition.usesPerRest)
+        ? ` (${usesRemaining}/${abilityDefinition.usesPerRest})`
+        : '';
+      elements.combatAbilityButton.textContent = abilityName
+        ? `Use ${abilityName}${usesText}`
+        : 'Use Ability';
+    }
     if (elements.combatCurrentZone) {
       const zone = getCurrentZone();
       elements.combatCurrentZone.textContent = zone?.name || 'Unknown';
@@ -1231,6 +1323,22 @@
       elements.combatStatus.innerHTML = '<p>No combat is currently underway.</p>';
       renderCombatLog();
       return;
+    }
+    if (elements.combatAbilityButton) {
+      const abilityName = player.abilities?.[0];
+      const abilityDefinition = abilityName ? getAbilityDefinition(abilityName) : null;
+      if (!abilityName) {
+        elements.combatAbilityButton.disabled = true;
+      } else if (
+        abilityDefinition &&
+        Number.isFinite(abilityDefinition.usesPerRest) &&
+        getAbilityUsesRemaining(abilityName) <= 0
+      ) {
+        elements.combatAbilityButton.disabled = true;
+      }
+      if (abilityDefinition && state.combat.playerMana < (abilityDefinition.manaCost ?? 0)) {
+        elements.combatAbilityButton.disabled = true;
+      }
     }
     const playerMaxHealth = getTotalStat(player, 'health');
     const playerMaxMana = getTotalStat(player, 'mana');
@@ -1450,20 +1558,39 @@
       addCombatLog(`You strike the ${enemy.name} for ${damage} damage.`, logTypes.SUCCESS);
       actionPerformed = true;
     } else if (action === 'ability') {
-      const abilityCost = 15;
-      if (state.combat.playerMana < abilityCost) {
+      ensureAbilityState(player);
+      const abilityName = player.abilities?.[0];
+      if (!abilityName) {
+        addCombatLog('You have no special techniques prepared.', logTypes.WARNING);
+        renderCombatState();
+        return;
+      }
+      const abilityDefinition = getAbilityDefinition(abilityName);
+      const manaCost = abilityDefinition?.manaCost ?? 15;
+      const usesRemaining = getAbilityUsesRemaining(abilityName);
+      if (Number.isFinite(abilityDefinition?.usesPerRest) && usesRemaining <= 0) {
+        addCombatLog(`You have no remaining uses of ${abilityName}. Rest to recover.`, logTypes.WARNING);
+        renderCombatState();
+        return;
+      }
+      if (state.combat.playerMana < manaCost) {
         addCombatLog('You need more mana to unleash a special ability.', logTypes.WARNING);
         renderCombatState();
         return;
       }
-      const abilityName = state.player.abilities?.[0] || 'a signature technique';
-      state.combat.playerMana = Math.max(0, state.combat.playerMana - abilityCost);
-      const damage = Math.max(
-        8,
-        Math.round(calculatePlayerAttack() * 1.1 + 8 - enemy.stats.defense * 0.2)
-      );
+      state.combat.playerMana = Math.max(0, state.combat.playerMana - manaCost);
+      const multiplier = abilityDefinition?.damageMultiplier ?? 1.1;
+      const bonus = abilityDefinition?.bonusDamage ?? 8;
+      const mitigation = abilityDefinition?.defenseMitigation ?? 0.2;
+      const minimumDamage = abilityDefinition?.minimumDamage ?? 8;
+      const rawDamage = Math.round(calculatePlayerAttack() * multiplier + bonus - enemy.stats.defense * mitigation);
+      const damage = Math.max(minimumDamage, rawDamage);
       state.combat.enemyHealth -= damage;
       addCombatLog(`You channel ${abilityName}, dealing ${damage} damage!`, logTypes.SUCCESS);
+      if (Number.isFinite(abilityDefinition?.usesPerRest)) {
+        player.abilityUses[abilityName] = Math.max(0, usesRemaining - 1);
+        scheduleSave();
+      }
       actionPerformed = true;
     } else if (action === 'guard') {
       state.combat.guard = true;
@@ -1937,6 +2064,7 @@
     setFeedback('profession', message, logTypes.SUCCESS);
     renderInventory();
     updateQuestProgress('collect', itemId, amount);
+    advanceTime(1);
   }
 
   function craftRecipe(itemId) {
@@ -1970,6 +2098,7 @@
     addLog(success, logTypes.SUCCESS);
     setFeedback('profession', success, logTypes.SUCCESS);
     renderInventory();
+    advanceTime(1);
   }
 
   function hasCraftingMaterials(requirements) {
@@ -2431,10 +2560,25 @@
   function restAtCamp() {
     if (!state.player) return;
     if (!ensureCanAct('rest')) return;
-    state.player.resources.health = getTotalStat(state.player, 'health');
-    state.player.resources.mana = getTotalStat(state.player, 'mana');
+    const supplies = state.player.inventory?.[CAMP_SUPPLIES_ITEM_ID] || 0;
+    if (supplies <= 0) {
+      addLog('You need Camp Supplies to set up a proper camp.', logTypes.WARNING);
+      return;
+    }
+    removeItem(state.player, CAMP_SUPPLIES_ITEM_ID, 1);
+    const maxHealth = getTotalStat(state.player, 'health');
+    const maxMana = getTotalStat(state.player, 'mana');
+    state.player.resources.health = maxHealth;
+    state.player.resources.mana = maxMana;
+    resetAbilityUses(state.player);
+    const timeline = ensureTimeline(state.player);
+    timeline.segments = 0;
+    timeline.day += 1;
     addLog('You rest at camp, recovering your strength.', logTypes.INFO);
+    addLog(`Day ${timeline.day} dawns as you break camp.`, logTypes.SUCCESS);
+    renderInventory();
     updatePlayerPanel();
+    scheduleSave();
   }
 
   function isInCombat() {
@@ -2494,6 +2638,110 @@
 
   function getQuest(id) {
     return dataIndex.quests[id];
+  }
+
+  function getAbilityDefinition(abilityName) {
+    if (!abilityName) return null;
+    return abilityLibrary[abilityName] || null;
+  }
+
+  function ensureAbilityState(player) {
+    if (!player) return;
+    if (!Array.isArray(player.abilities)) {
+      player.abilities = [];
+    }
+    if (!player.abilityUses || typeof player.abilityUses !== 'object') {
+      player.abilityUses = {};
+    }
+    const knownAbilities = new Set(player.abilities);
+    Object.keys(player.abilityUses).forEach((abilityName) => {
+      if (!knownAbilities.has(abilityName)) {
+        delete player.abilityUses[abilityName];
+      }
+    });
+    player.abilities.forEach((abilityName) => {
+      const definition = getAbilityDefinition(abilityName);
+      if (!definition || !Number.isFinite(definition.usesPerRest)) {
+        delete player.abilityUses[abilityName];
+        return;
+      }
+      const uses = player.abilityUses[abilityName];
+      if (!Number.isFinite(uses) || uses < 0 || uses > definition.usesPerRest) {
+        player.abilityUses[abilityName] = definition.usesPerRest;
+      }
+    });
+  }
+
+  function resetAbilityUses(player) {
+    if (!player) return;
+    ensureAbilityState(player);
+    Object.keys(player.abilityUses).forEach((abilityName) => {
+      const definition = getAbilityDefinition(abilityName);
+      if (definition && Number.isFinite(definition.usesPerRest)) {
+        player.abilityUses[abilityName] = definition.usesPerRest;
+      }
+    });
+  }
+
+  function getAbilityUsesRemaining(abilityName) {
+    if (!state.player || !abilityName) return Infinity;
+    ensureAbilityState(state.player);
+    const definition = getAbilityDefinition(abilityName);
+    if (!definition || !Number.isFinite(definition.usesPerRest)) {
+      return Infinity;
+    }
+    const stored = state.player.abilityUses?.[abilityName];
+    if (!Number.isFinite(stored)) {
+      return definition.usesPerRest;
+    }
+    const safeValue = Math.floor(stored);
+    return Math.max(0, Math.min(definition.usesPerRest, safeValue));
+  }
+
+  function ensureTimeline(player) {
+    if (!player) {
+      return { day: 1, segments: 0 };
+    }
+    if (!player.timeline || typeof player.timeline !== 'object') {
+      player.timeline = { day: 1, segments: 0 };
+    }
+    const timeline = player.timeline;
+    const safeDay = Number.isFinite(timeline.day) ? Math.max(1, Math.floor(timeline.day)) : 1;
+    const safeSegments = Number.isFinite(timeline.segments) ? Math.max(0, Math.floor(timeline.segments)) : 0;
+    timeline.day = safeDay;
+    timeline.segments = Math.min(safeSegments, TIME_SEGMENTS_PER_DAY - 1);
+    return timeline;
+  }
+
+  function applyPassiveRegeneration() {
+    const player = state.player;
+    if (!player) return;
+    const maxHealth = getTotalStat(player, 'health');
+    const maxMana = getTotalStat(player, 'mana');
+    const healthRegen = Math.max(1, Math.round(maxHealth * PASSIVE_HEALTH_REGEN_RATE));
+    const manaRegen = Math.max(1, Math.round(maxMana * PASSIVE_MANA_REGEN_RATE));
+    player.resources.health = clamp((player.resources.health || 0) + healthRegen, 0, maxHealth);
+    player.resources.mana = clamp((player.resources.mana || 0) + manaRegen, 0, maxMana);
+  }
+
+  function advanceTime(ticks = 1, options = {}) {
+    if (!state.player) return;
+    const increments = Math.max(0, Math.floor(Number(ticks) || 0));
+    if (increments <= 0) return;
+    const timeline = ensureTimeline(state.player);
+    for (let i = 0; i < increments; i += 1) {
+      if (!options.skipRegen) {
+        applyPassiveRegeneration();
+      }
+      timeline.segments += 1;
+      if (timeline.segments >= TIME_SEGMENTS_PER_DAY) {
+        timeline.segments = 0;
+        timeline.day += 1;
+        addLog(`Day ${timeline.day} dawns as your travels continue.`, logTypes.INFO);
+      }
+    }
+    updatePlayerPanel();
+    scheduleSave();
   }
 
   function getTotalStat(player, stat) {
@@ -2608,6 +2856,8 @@
     player.quests.completed = (player.quests.completed || [])
       .map((entry) => rehydrateQuestEntry(entry))
       .filter(Boolean);
+    ensureTimeline(player);
+    ensureAbilityState(player);
   }
 
   function rehydrateQuestEntry(entry) {

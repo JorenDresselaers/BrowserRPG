@@ -103,6 +103,15 @@
     "value": 6
   },
   {
+    "id": "camp_supplies",
+    "name": "Camp Supplies",
+    "type": "supply",
+    "rarity": "common",
+    "description": "Bedrolls, rations, and tinder needed to establish a proper camp.",
+    "value": 4,
+    "tags": ["camp"]
+  },
+  {
     "id": "ember_leaf",
     "name": "Emberleaf",
     "type": "material",
