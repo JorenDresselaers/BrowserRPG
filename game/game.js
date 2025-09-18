@@ -1682,6 +1682,91 @@
     renderCurrentLandmarkPanel();
   }
 
+  function isDungeonLandmark(landmark) {
+    return typeof landmark?.category === 'string' && landmark.category.toLowerCase() === 'dungeon';
+  }
+
+  function getActiveDungeonState(landmarkId) {
+    const dungeonState = state.travel?.dungeon;
+    if (!dungeonState) return null;
+    if (landmarkId && dungeonState.landmarkId !== landmarkId) return null;
+    return dungeonState;
+  }
+
+  function ensureDungeonStateForLandmark(landmark) {
+    if (!isDungeonLandmark(landmark)) return null;
+    const existing = getActiveDungeonState(landmark.id);
+    if (existing) return existing;
+    const pendingEnemies = (landmark.enemyIds || []).filter((enemyId) => Boolean(getEnemy(enemyId)));
+    const dungeonState = {
+      landmarkId: landmark.id,
+      pendingEnemies: pendingEnemies.slice(),
+      activeEnemyId: null,
+      optionUsed: false,
+      autoEngage: false
+    };
+    state.travel.dungeon = dungeonState;
+    scheduleSave();
+    if (!dungeonState.pendingEnemies.length) {
+      const landmarkName = landmark.name || 'the dungeon';
+      const message = `The way into ${landmarkName} is unguarded. Choose carefully—only one opportunity awaits.`;
+      setLandmarkFeedback(message, logTypes.INFO);
+    }
+    return dungeonState;
+  }
+
+  function isDungeonCleared(dungeonState) {
+    if (!dungeonState) return false;
+    return dungeonState.pendingEnemies.length === 0 && !dungeonState.activeEnemyId;
+  }
+
+  function clearActiveDungeonState() {
+    if (state.travel.dungeon) {
+      state.travel.dungeon = null;
+      scheduleSave();
+    }
+  }
+
+  function consumeDungeonEnemy(dungeonState, enemyId) {
+    if (!dungeonState) return;
+    const index = dungeonState.pendingEnemies.indexOf(enemyId);
+    if (index >= 0) {
+      dungeonState.pendingEnemies.splice(index, 1);
+    } else if (dungeonState.pendingEnemies.length) {
+      dungeonState.pendingEnemies.shift();
+    }
+  }
+
+  function engageNextDungeonEnemy() {
+    const dungeonState = state.travel.dungeon;
+    if (!dungeonState || isInCombat() || dungeonState.activeEnemyId || dungeonState.autoEngage === false) return;
+    while (dungeonState.pendingEnemies.length) {
+      const enemyId = dungeonState.pendingEnemies[0];
+      const enemy = getEnemy(enemyId);
+      if (!enemy) {
+        dungeonState.pendingEnemies.shift();
+        continue;
+      }
+      const landmark = getLandmark(dungeonState.landmarkId);
+      const landmarkName = landmark?.name || 'the dungeon';
+      const message = `Defenders of ${landmarkName} surge to meet you!`;
+      dungeonState.activeEnemyId = enemy.id;
+      scheduleSave();
+      enterCombat(enemy.id, { type: 'dungeonLandmark', landmarkId: dungeonState.landmarkId });
+      setLandmarkFeedback(message, logTypes.DANGER);
+      return;
+    }
+    if (!dungeonState.pendingEnemies.length) {
+      dungeonState.activeEnemyId = null;
+      dungeonState.autoEngage = false;
+      const landmark = getLandmark(dungeonState.landmarkId);
+      const landmarkName = landmark?.name || 'the dungeon';
+      const message = `The defenders of ${landmarkName} have fallen. You may choose one opportunity before regrouping.`;
+      setLandmarkFeedback(message, logTypes.SUCCESS);
+      scheduleSave();
+    }
+  }
+
   function renderCurrentLandmarkPanel() {
     if (!elements.currentLandmarkPanel) return;
     const location = getCurrentLocation();
@@ -1700,6 +1785,23 @@
       return;
     }
     const landmark = location.data;
+    const landmarkIsDungeon = isDungeonLandmark(landmark);
+    const dungeonState = landmarkIsDungeon ? ensureDungeonStateForLandmark(landmark) : null;
+    let actionsLocked = false;
+    let lockedMessage = '';
+    let lockedMessageType = logTypes.INFO;
+    if (landmarkIsDungeon && dungeonState) {
+      if (!isDungeonCleared(dungeonState)) {
+        actionsLocked = true;
+        lockedMessage = 'Hostile forces still guard this dungeon. Defeat them before choosing an option.';
+        lockedMessageType = logTypes.WARNING;
+        engageNextDungeonEnemy();
+      } else if (dungeonState.optionUsed) {
+        actionsLocked = true;
+        lockedMessage = 'You have already explored this dungeon. Choose a new destination or make camp before continuing.';
+        lockedMessageType = logTypes.INFO;
+      }
+    }
     elements.currentLandmarkPanel.classList.remove('hidden');
     if (elements.currentLandmarkTitle) {
       elements.currentLandmarkTitle.textContent = landmark.name;
@@ -1732,7 +1834,10 @@
             const description = action.description
               ? `<p class="action-description">${action.description}</p>`
               : '';
-            return `<div class="landmark-action"><button type="button" data-landmark-action="${action.id}">${action.label}</button>${description}</div>`;
+            const disabledAttributes = actionsLocked
+              ? ' disabled aria-disabled="true"'
+              : '';
+            return `<div class="landmark-action"><button type="button" data-landmark-action="${action.id}"${disabledAttributes}>${action.label}</button>${description}</div>`;
           })
           .join('');
       }
@@ -1740,14 +1845,30 @@
     if (elements.currentLandmarkFeedback) {
       elements.currentLandmarkFeedback.className = 'screen-feedback';
       const feedback = state.travel.landmarkFeedback;
-      if (feedback?.message) {
-        elements.currentLandmarkFeedback.textContent = feedback.message;
-        elements.currentLandmarkFeedback.classList.add('active');
-        if (feedback.type) {
-          elements.currentLandmarkFeedback.classList.add(feedback.type);
+      let message = feedback?.message || '';
+      let typeClass = feedback?.type || null;
+      let highlight = Boolean(feedback?.message);
+      if (!feedback?.message) {
+        if (actionsLocked && lockedMessage) {
+          message = lockedMessage;
+          typeClass = lockedMessageType;
+          highlight = true;
+        } else {
+          message = 'Interact with the landmark to uncover its secrets.';
         }
-      } else {
-        elements.currentLandmarkFeedback.textContent = 'Interact with the landmark to uncover its secrets.';
+      } else if (landmarkIsDungeon && dungeonState?.optionUsed) {
+        const note = ' Choose a new destination or make camp before attempting more.';
+        if (!message.includes('Choose a new destination') && !message.includes('make camp')) {
+          message = `${message} ${note}`;
+        }
+      }
+      elements.currentLandmarkFeedback.textContent = message;
+      if (highlight) {
+        elements.currentLandmarkFeedback.classList.add('active');
+      }
+      if (typeClass) {
+        elements.currentLandmarkFeedback.classList.add(typeClass);
+        elements.currentLandmarkFeedback.classList.add('active');
       }
     }
   }
@@ -1765,6 +1886,23 @@
     if (isInCombat()) {
       setLandmarkFeedback('You cannot interact with the landmark during combat.', logTypes.WARNING);
       return;
+    }
+    if (isDungeonLandmark(landmark)) {
+      const dungeonState = ensureDungeonStateForLandmark(landmark);
+      if (dungeonState && !isDungeonCleared(dungeonState)) {
+        dungeonState.autoEngage = true;
+        scheduleSave();
+        engageNextDungeonEnemy();
+        return;
+      }
+      if (dungeonState?.optionUsed) {
+        setLandmarkFeedback('You have already taken an opportunity here. Travel onward or make camp before continuing.', logTypes.INFO);
+        return;
+      }
+      if (dungeonState) {
+        dungeonState.optionUsed = true;
+        scheduleSave();
+      }
     }
     resolveLandmarkAction(landmark, action);
   }
@@ -1881,13 +2019,25 @@
     if (!state.player || !location) return;
     if (location.type === 'landmark') {
       state.player.location.landmarkId = location.id;
-      const fallbackZone = (location.data?.connectedZoneIds || []).find((zoneId) => getZone(zoneId));
+      const landmarkData = location.data || getLandmark(location.id);
+      const fallbackZone = (landmarkData?.connectedZoneIds || []).find((zoneId) => getZone(zoneId));
       if (fallbackZone) {
         state.player.location.zoneId = fallbackZone;
+      }
+      if (landmarkData && isDungeonLandmark(landmarkData)) {
+        const dungeonState = ensureDungeonStateForLandmark(landmarkData);
+        if (dungeonState) {
+          dungeonState.autoEngage = true;
+          scheduleSave();
+        }
+        engageNextDungeonEnemy();
+      } else {
+        clearActiveDungeonState();
       }
     } else {
       state.player.location.zoneId = location.id;
       state.player.location.landmarkId = null;
+      clearActiveDungeonState();
     }
   }
 
@@ -2702,6 +2852,10 @@
   }
 
   function handlePostCombatContext(context, outcome) {
+    if (context?.type === 'dungeonLandmark') {
+      handleDungeonPostCombatOutcome(context, outcome);
+      return;
+    }
     if (context?.type !== 'travel') return;
     const journey = state.travel.journey;
     if (!journey) return;
@@ -2729,6 +2883,41 @@
       completeJourney();
     } else {
       renderTravelScreen();
+    }
+  }
+
+  function handleDungeonPostCombatOutcome(context, outcome) {
+    const dungeonState = state.travel.dungeon;
+    if (!dungeonState || dungeonState.landmarkId !== context.landmarkId) return;
+    const landmark = getLandmark(dungeonState.landmarkId);
+    const landmarkName = landmark?.name || 'the dungeon';
+    if (outcome === 'victory') {
+      if (dungeonState.activeEnemyId) {
+        consumeDungeonEnemy(dungeonState, dungeonState.activeEnemyId);
+      }
+      dungeonState.activeEnemyId = null;
+      if (isDungeonCleared(dungeonState)) {
+        dungeonState.autoEngage = false;
+        setLandmarkFeedback(`The defenders of ${landmarkName} have been defeated. Choose one option before regrouping.`, logTypes.SUCCESS);
+      } else {
+        dungeonState.autoEngage = true;
+        setLandmarkFeedback(`Another threat stirs within ${landmarkName}.`, logTypes.WARNING);
+      }
+      scheduleSave();
+      return;
+    }
+    if (outcome === 'defeat') {
+      dungeonState.activeEnemyId = null;
+      dungeonState.autoEngage = false;
+      setLandmarkFeedback(`You are forced back from ${landmarkName}. Recover before pressing the assault.`, logTypes.DANGER);
+      scheduleSave();
+      return;
+    }
+    if (outcome === 'flee') {
+      dungeonState.activeEnemyId = null;
+      dungeonState.autoEngage = false;
+      setLandmarkFeedback(`You withdraw before clearing the defenders of ${landmarkName}.`, logTypes.WARNING);
+      scheduleSave();
     }
   }
 
@@ -4003,6 +4192,14 @@
     timeline.day += 1;
     addLog('You rest at camp, recovering your strength.', logTypes.INFO);
     addLog(`Day ${timeline.day} dawns as you break camp.`, logTypes.SUCCESS);
+    if (state.travel.dungeon) {
+      if (state.travel.dungeon.optionUsed) {
+        state.travel.dungeon = null;
+      } else {
+        state.travel.dungeon.autoEngage = false;
+      }
+      renderCurrentLandmarkPanel();
+    }
     renderInventory();
     updatePlayerPanel();
     scheduleSave();
@@ -4540,6 +4737,25 @@
         }
       }
     }
+    if (state.travel.dungeon) {
+      const dungeonState = state.travel.dungeon;
+      const landmark = dungeonState.landmarkId ? getLandmark(dungeonState.landmarkId) : null;
+      if (!landmark || !isDungeonLandmark(landmark) || state.player.location.landmarkId !== landmark.id) {
+        state.travel.dungeon = null;
+      } else {
+        dungeonState.pendingEnemies = Array.isArray(dungeonState.pendingEnemies)
+          ? dungeonState.pendingEnemies.filter((enemyId) => Boolean(getEnemy(enemyId)))
+          : [];
+        dungeonState.activeEnemyId = dungeonState.activeEnemyId && getEnemy(dungeonState.activeEnemyId)
+          ? dungeonState.activeEnemyId
+          : null;
+        dungeonState.optionUsed = Boolean(dungeonState.optionUsed);
+        dungeonState.autoEngage = dungeonState.autoEngage === false ? false : true;
+        if (!dungeonState.pendingEnemies.length) {
+          dungeonState.autoEngage = false;
+        }
+      }
+    }
     delete state.travel.destinationZoneId;
     const currentLocation = getCurrentLocation();
     const destination = getTravelDestination();
@@ -4642,7 +4858,8 @@
       focus: 'balanced',
       journey: null,
       events: [],
-      landmarkFeedback: null
+      landmarkFeedback: null,
+      dungeon: null
     };
   }
 
