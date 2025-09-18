@@ -17,6 +17,8 @@
   const TIME_SEGMENTS_PER_DAY = 4;
   const PASSIVE_HEALTH_REGEN_RATE = 0.05;
   const PASSIVE_MANA_REGEN_RATE = 0.06;
+  const DEFAULT_INVENTORY_SLOT_COUNT = 24;
+  const DEFAULT_MAX_STACK_SIZE = 1;
 
   const abilityLibrary = {
     'Arcane Surge': {
@@ -570,7 +572,7 @@
       stats: { ...classData.stats },
       growth: { ...classData.statGrowth },
       abilities: [...(classData.abilities || [])],
-      inventory: {},
+      inventory: [],
       equipment: {
         weapon: null,
         offHand: null,
@@ -648,12 +650,17 @@
     elements.inventoryList.addEventListener('click', (event) => {
       const equipButton = event.target.closest('[data-equip-item]');
       if (equipButton && state.player) {
-        equipItem(equipButton.dataset.equipItem);
+        const slotIndex = Number.parseInt(equipButton.dataset.slotIndex, 10);
+        equipItem(
+          equipButton.dataset.equipItem,
+          Number.isNaN(slotIndex) ? null : slotIndex
+        );
         return;
       }
       const useButton = event.target.closest('[data-use-item]');
       if (!useButton || !state.player) return;
-      useItem(useButton.dataset.useItem);
+      const slotIndex = Number.parseInt(useButton.dataset.slotIndex, 10);
+      useItem(useButton.dataset.useItem, Number.isNaN(slotIndex) ? null : slotIndex);
     });
     elements.merchantInventory.addEventListener('click', (event) => {
       const buyButton = event.target.closest('[data-buy-item]');
@@ -864,7 +871,7 @@
       elements.adventureDay.textContent = `${timeline.day}`;
     }
     if (elements.campSupplies) {
-      elements.campSupplies.textContent = `${player.inventory?.[CAMP_SUPPLIES_ITEM_ID] || 0}`;
+      elements.campSupplies.textContent = `${getInventoryItemCount(player, CAMP_SUPPLIES_ITEM_ID)}`;
     }
     updateResourceBar(elements.healthBar, elements.healthValue, player.resources.health, maxHealth);
     updateResourceBar(elements.manaBar, elements.manaValue, player.resources.mana, maxMana);
@@ -2537,8 +2544,8 @@
   }
   function renderSellableItems(merchant) {
     const buyTypes = merchant.buyTypes || [];
-    const items = Object.entries(state.player.inventory)
-      .filter(([itemId, qty]) => qty > 0)
+    const items = Array.from(getInventorySummary(state.player).entries())
+      .filter(([, qty]) => qty > 0)
       .filter(([itemId]) => {
         const item = getItem(itemId);
         return buyTypes.includes(item.type) || item.tags?.some((tag) => buyTypes.includes(tag));
@@ -2696,7 +2703,7 @@
 
   function hasCraftingMaterials(requirements) {
     return Object.entries(requirements || {}).every(([itemId, qty]) => {
-      return (state.player.inventory[itemId] || 0) >= qty;
+      return getInventoryItemCount(state.player, itemId) >= qty;
     });
   }
 
@@ -2706,19 +2713,167 @@
     });
   }
 
-  function grantItem(player, itemId, amount = 1, options = {}) {
-    if (!itemId) return;
-    const item = getItem(itemId);
-    if (!item) return;
-    player.inventory[itemId] = (player.inventory[itemId] || 0) + amount;
-    if (options.autoEquip) {
-      autoEquip(player, itemId);
-    }
+  function getItemMaxStack(item) {
+    const rawStack = Number.isFinite(item?.maxStack)
+      ? item.maxStack
+      : Number.isFinite(item?.stackSize)
+        ? item.stackSize
+        : DEFAULT_MAX_STACK_SIZE;
+    return Math.max(1, Math.floor(rawStack || DEFAULT_MAX_STACK_SIZE));
   }
 
-  function removeItem(player, itemId, amount = 1) {
-    if (!player.inventory[itemId]) return;
-    player.inventory[itemId] = Math.max(0, player.inventory[itemId] - amount);
+  function normaliseInventoryEntry(entry) {
+    if (!entry || typeof entry !== 'object') {
+      return [];
+    }
+    const itemId = entry.itemId || entry.id;
+    const rawQuantity = Number(entry.quantity ?? entry.count ?? entry.qty ?? 0);
+    const quantity = Math.max(0, Math.floor(rawQuantity));
+    if (!itemId || quantity <= 0) {
+      return [];
+    }
+    const item = getItem(itemId);
+    const maxStack = getItemMaxStack(item);
+    const slots = [];
+    let remaining = quantity;
+    while (remaining > 0) {
+      const amount = Math.min(remaining, maxStack);
+      slots.push({ itemId, quantity: amount });
+      remaining -= amount;
+    }
+    return slots;
+  }
+
+  function normaliseInventoryData(rawInventory) {
+    if (!rawInventory) {
+      return [];
+    }
+    if (Array.isArray(rawInventory)) {
+      return rawInventory
+        .map((entry) => normaliseInventoryEntry(entry))
+        .reduce((all, slots) => all.concat(slots.length ? slots : []), []);
+    }
+    if (typeof rawInventory === 'object') {
+      return Object.entries(rawInventory)
+        .map(([itemId, qty]) => normaliseInventoryEntry({ itemId, quantity: qty }))
+        .reduce((all, slots) => all.concat(slots), []);
+    }
+    return [];
+  }
+
+  function ensurePlayerInventory(player) {
+    if (!player) {
+      return [];
+    }
+    if (!Array.isArray(player.inventory)) {
+      player.inventory = normaliseInventoryData(player.inventory);
+    }
+    return player.inventory;
+  }
+
+  function getInventoryItemCount(player, itemId) {
+    if (!player || !itemId) {
+      return 0;
+    }
+    return ensurePlayerInventory(player).reduce((total, slot) => {
+      if (!slot || slot.itemId !== itemId) {
+        return total;
+      }
+      return total + Math.max(0, Number(slot.quantity) || 0);
+    }, 0);
+  }
+
+  function getInventorySlot(player, slotIndex) {
+    if (!player || !Array.isArray(player.inventory)) {
+      return null;
+    }
+    const index = Number(slotIndex);
+    if (!Number.isInteger(index) || index < 0 || index >= player.inventory.length) {
+      return null;
+    }
+    return player.inventory[index] || null;
+  }
+
+  function getInventorySummary(player) {
+    const summary = new Map();
+    ensurePlayerInventory(player).forEach((slot) => {
+      if (!slot?.itemId) {
+        return;
+      }
+      const current = summary.get(slot.itemId) || 0;
+      summary.set(slot.itemId, current + Math.max(0, Number(slot.quantity) || 0));
+    });
+    return summary;
+  }
+
+  function grantItem(player, itemId, amount = 1, options = {}) {
+    if (!player || !itemId) {
+      return 0;
+    }
+    const item = getItem(itemId);
+    const maxStack = getItemMaxStack(item);
+    const inventory = ensurePlayerInventory(player);
+    let remaining = Math.max(0, Math.floor(Number(amount) || 0));
+    let added = 0;
+    while (remaining > 0) {
+      let slot = inventory.find((entry) => entry.itemId === itemId && entry.quantity < maxStack);
+      if (!slot) {
+        slot = { itemId, quantity: 0 };
+        inventory.push(slot);
+      }
+      const capacity = Math.max(0, maxStack - slot.quantity);
+      if (capacity <= 0) {
+        break;
+      }
+      const toAdd = Math.min(capacity, remaining);
+      slot.quantity += toAdd;
+      remaining -= toAdd;
+      added += toAdd;
+    }
+    if (added > 0 && options.autoEquip) {
+      autoEquip(player, itemId);
+    }
+    return added;
+  }
+
+  function removeItem(player, itemId, amount = 1, options = {}) {
+    if (!player || !itemId) {
+      return false;
+    }
+    const inventory = ensurePlayerInventory(player);
+    let remaining = Math.max(0, Math.floor(Number(amount) || 0));
+    if (remaining <= 0) {
+      return true;
+    }
+    const preferredIndexRaw = Number(options?.slotIndex);
+    const preferredIndex = Number.isInteger(preferredIndexRaw) ? preferredIndexRaw : null;
+    if (preferredIndex !== null) {
+      const targeted = inventory[preferredIndex];
+      if (targeted?.itemId === itemId) {
+        const toRemove = Math.min(targeted.quantity, remaining);
+        targeted.quantity -= toRemove;
+        remaining -= toRemove;
+        if (targeted.quantity <= 0) {
+          inventory.splice(preferredIndex, 1);
+        }
+      }
+    }
+    for (let index = inventory.length - 1; index >= 0 && remaining > 0; index -= 1) {
+      if (index === preferredIndex) {
+        continue;
+      }
+      const slot = inventory[index];
+      if (!slot || slot.itemId !== itemId) {
+        continue;
+      }
+      const toRemove = Math.min(slot.quantity, remaining);
+      slot.quantity -= toRemove;
+      remaining -= toRemove;
+      if (slot.quantity <= 0) {
+        inventory.splice(index, 1);
+      }
+    }
+    return remaining <= 0;
   }
 
   function autoEquip(player, itemId) {
@@ -2733,29 +2888,46 @@
 
   function renderInventory() {
     if (!state.player) return;
-    const entries = Object.entries(state.player.inventory).filter(([, qty]) => qty > 0);
-    if (!entries.length) {
-      elements.inventoryList.innerHTML = '<p>Your bags are empty.</p>';
-      return;
-    }
+    const inventory = ensurePlayerInventory(state.player);
+    const totalSlots = Math.max(DEFAULT_INVENTORY_SLOT_COUNT, inventory.length);
     const fragment = document.createDocumentFragment();
-    entries.forEach(([itemId, qty]) => {
-      const item = getItem(itemId);
-      if (!item) return;
+    for (let index = 0; index < totalSlots; index += 1) {
+      const slot = index < inventory.length ? inventory[index] : null;
       const template = elements.inventoryItemTemplate.content.cloneNode(true);
       const card = template.querySelector('.card');
       const header = template.querySelector('.card-header');
       const body = template.querySelector('.card-body');
       const footer = template.querySelector('.card-footer');
-      header.textContent = '';
+      card.classList.add('inventory-slot');
+      header.innerHTML = '';
+      body.innerHTML = '';
+      footer.innerHTML = '';
+
+      const slotLabel = document.createElement('span');
+      slotLabel.className = 'slot-label';
+      slotLabel.textContent = `Slot ${index + 1}`;
+      header.appendChild(slotLabel);
+
+      if (!slot) {
+        card.classList.add('empty');
+        body.innerHTML = '<p class="empty-slot-text">Empty slot</p>';
+        footer.innerHTML = '<span>—</span>';
+        fragment.appendChild(card);
+        continue;
+      }
+
+      card.dataset.slotIndex = String(index);
+      const item = getItem(slot.itemId);
+      const itemName = item?.name || toTitle(slot.itemId || 'Unknown item');
       const title = document.createElement('span');
-      title.textContent = `${item.name} ×${qty}`;
+      title.className = 'item-name';
+      title.textContent = slot.quantity > 1 ? `${itemName} ×${slot.quantity}` : itemName;
       header.appendChild(title);
 
-      const slot = getEquipmentSlot(item);
-      const equippedItemId = slot ? state.player.equipment?.[slot] : null;
-      const currentEquippedItem = slot ? getItem(equippedItemId) : null;
-      const isEquipped = Boolean(slot && equippedItemId === itemId);
+      const equipmentSlot = item ? getEquipmentSlot(item) : null;
+      const equippedItemId = equipmentSlot ? state.player.equipment?.[equipmentSlot] : null;
+      const currentEquippedItem = equipmentSlot ? getItem(equippedItemId) : null;
+      const isEquipped = Boolean(equipmentSlot && equippedItemId === slot.itemId);
 
       if (isEquipped) {
         const badge = document.createElement('span');
@@ -2765,36 +2937,41 @@
         card.classList.add('equipped');
       }
 
-      const bodySections = [`<p>${item.description}</p>`];
-      if (slot) {
-        const slotLabel = equipmentSlotLabels[slot] || toTitle(slot);
+      const description = item?.description || 'An unfamiliar item of unknown origin.';
+      const bodySections = [`<p>${description}</p>`];
+      const effectSummary = buildItemEffectSummary(item);
+      if (effectSummary) {
+        bodySections.push(`<p class="item-effect">${effectSummary}</p>`);
+      }
+      if (equipmentSlot) {
+        const slotLabelText = equipmentSlotLabels[equipmentSlot] || toTitle(equipmentSlot);
         const classNames = getItemClassNames(item);
         const classText = classNames.length ? classNames.join(', ') : 'All classes';
         bodySections.push(
-          `<dl class="item-meta"><div><dt>Slot</dt><dd>${slotLabel}</dd></div><div><dt>Usable by</dt><dd>${classText}</dd></div></dl>`
+          `<dl class="item-meta"><div><dt>Slot</dt><dd>${slotLabelText}</dd></div><div><dt>Usable by</dt><dd>${classText}</dd></div></dl>`
         );
         const statsList = buildItemStatsList(item);
         if (statsList) {
           bodySections.push(statsList);
         }
-        const diffSummary = buildEquipChangeSummary(itemId, item, slot, equippedItemId, currentEquippedItem);
+        const diffSummary = buildEquipChangeSummary(slot.itemId, item, equipmentSlot, equippedItemId, currentEquippedItem);
         if (diffSummary) {
           bodySections.push(diffSummary);
         }
       }
       body.innerHTML = bodySections.join('');
 
-      const value = item.value ? `${item.value} gold` : 'No market value';
-      footer.innerHTML = '';
+      const valueText = item?.value ? `${item.value} gold` : 'No market value';
       const valueSpan = document.createElement('span');
-      valueSpan.textContent = value;
+      valueSpan.textContent = valueText;
       footer.appendChild(valueSpan);
 
-      if (slot) {
+      if (equipmentSlot) {
         const equipButton = document.createElement('button');
         equipButton.type = 'button';
-        equipButton.dataset.equipItem = itemId;
-        if (!canEquipItem(state.player, item)) {
+        equipButton.dataset.equipItem = slot.itemId;
+        equipButton.dataset.slotIndex = String(index);
+        if (!item || !canEquipItem(state.player, item)) {
           equipButton.textContent = 'Cannot equip';
           equipButton.disabled = true;
         } else if (isEquipped) {
@@ -2806,15 +2983,17 @@
         footer.appendChild(equipButton);
       }
 
-      if (item.type === 'consumable') {
+      if (item?.type === 'consumable') {
         const useButton = document.createElement('button');
         useButton.type = 'button';
         useButton.textContent = 'Use';
-        useButton.dataset.useItem = itemId;
+        useButton.dataset.useItem = slot.itemId;
+        useButton.dataset.slotIndex = String(index);
         footer.appendChild(useButton);
       }
+
       fragment.appendChild(card);
-    });
+    }
     elements.inventoryList.innerHTML = '';
     elements.inventoryList.appendChild(fragment);
   }
@@ -2842,6 +3021,29 @@
       })
       .join('');
     return `<ul class="item-stats">${rows}</ul>`;
+  }
+
+  function buildItemEffectSummary(item) {
+    const effect = item?.effect;
+    if (!effect || typeof effect !== 'object') {
+      return '';
+    }
+    const entries = Object.entries(effect).filter(([, value]) => Number.isFinite(value) && value !== 0);
+    if (!entries.length) {
+      return '';
+    }
+    const parts = entries.map(([key, value]) => {
+      const amount = Math.abs(Math.round(value));
+      if (key === 'health') {
+        return `${value >= 0 ? 'Restores' : 'Damages'} ${amount} health`;
+      }
+      if (key === 'mana') {
+        return `${value >= 0 ? 'Restores' : 'Drains'} ${amount} mana`;
+      }
+      const label = toTitle(key);
+      return `${value >= 0 ? 'Grants' : 'Reduces'} ${amount} ${label}`;
+    });
+    return parts.join(' • ');
   }
 
   function getEquipmentStatDiffs(newItem, currentItem) {
@@ -2879,7 +3081,7 @@
     return classIds.includes(player.classId);
   }
 
-  function equipItem(itemId) {
+  function equipItem(itemId, slotIndex = null) {
     if (!ensureCanAct('change your equipment')) return;
     const player = state.player;
     if (!player) return;
@@ -2887,9 +3089,17 @@
     if (!item) return;
     const slot = getEquipmentSlot(item);
     if (!slot) return;
-    if ((player.inventory[itemId] || 0) <= 0) {
+    if (getInventoryItemCount(player, itemId) <= 0) {
       addLog('You do not have that item in your pack.', logTypes.WARNING);
       return;
+    }
+    if (slotIndex !== null) {
+      const inventorySlot = getInventorySlot(player, slotIndex);
+      if (!inventorySlot || inventorySlot.itemId !== itemId) {
+        addLog('That item is no longer in that slot.', logTypes.WARNING);
+        renderInventory();
+        return;
+      }
     }
     if (!canEquipItem(player, item)) {
       addLog('Your training does not allow you to wield that equipment.', logTypes.WARNING);
@@ -2907,14 +3117,22 @@
     scheduleSave();
   }
 
-  function useItem(itemId) {
+  function useItem(itemId, slotIndex = null) {
     if (!ensureCanAct('use items from your pack')) return;
 
     const item = getItem(itemId);
     if (!item || item.type !== 'consumable') return;
-    if ((state.player.inventory[itemId] || 0) <= 0) {
+    if (getInventoryItemCount(state.player, itemId) <= 0) {
       addLog('You have no more of that item left.', logTypes.WARNING);
       return;
+    }
+    if (slotIndex !== null) {
+      const inventorySlot = getInventorySlot(state.player, slotIndex);
+      if (!inventorySlot || inventorySlot.itemId !== itemId) {
+        addLog('That item is no longer in that slot.', logTypes.WARNING);
+        renderInventory();
+        return;
+      }
     }
     const effect = item.effect || {};
     if (effect.health) {
@@ -2931,7 +3149,7 @@
         getTotalStat(state.player, 'mana')
       );
     }
-    removeItem(state.player, itemId, 1);
+    removeItem(state.player, itemId, 1, { slotIndex });
     addLog(`You use ${item.name}.`, logTypes.SUCCESS);
     renderInventory();
     updatePlayerPanel();
@@ -2980,7 +3198,7 @@
       setFeedback('trade', 'No merchant is available to trade right now.', logTypes.INFO);
       return;
     }
-    const quantity = state.player.inventory[itemId] || 0;
+    const quantity = getInventoryItemCount(state.player, itemId);
     if (!quantity) {
       const warning = 'You have none of that item to sell.';
       addLog(warning, logTypes.WARNING);
@@ -3259,7 +3477,7 @@
   function restAtCamp() {
     if (!state.player) return;
     if (!ensureCanAct('rest')) return;
-    const supplies = state.player.inventory?.[CAMP_SUPPLIES_ITEM_ID] || 0;
+    const supplies = getInventoryItemCount(state.player, CAMP_SUPPLIES_ITEM_ID);
     if (supplies <= 0) {
       addLog('You need Camp Supplies to set up a proper camp.', logTypes.WARNING);
       return;
@@ -3697,7 +3915,7 @@
   }
 
   function normaliseLoadedPlayer(player) {
-    player.inventory = player.inventory || {};
+    player.inventory = normaliseInventoryData(player.inventory);
     player.equipment = {
       weapon: player.equipment?.weapon || null,
       offHand: player.equipment?.offHand || null,
