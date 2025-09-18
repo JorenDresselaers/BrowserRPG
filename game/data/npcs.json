@@ -29,9 +29,10 @@
     "inventory": [
       { "itemId": "healing_potion", "price": 8 },
       { "itemId": "mana_potion", "price": 8 },
-      { "itemId": "bronze_sword", "price": 28 }
+      { "itemId": "bronze_sword", "price": 28 },
+      { "itemId": "camp_supplies", "price": 6 }
     ],
-    "buyTypes": ["material", "loot"],
+    "buyTypes": ["material", "loot", "supply"],
     "services": ["trading", "repairs"]
   },
   {

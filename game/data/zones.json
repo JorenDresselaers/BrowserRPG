@@ -7,7 +7,7 @@
     "climate": "Temperate wildfire",
     "enemyIds": ["ember_whelp", "ember_sprite", "emberkin_guard"],
     "npcIds": ["sentinel_lyra", "brock_ironbeard", "sage_elowen"],
-    "gatherables": ["ember_leaf", "bronze_ore"],
+    "gatherables": ["ember_leaf", "bronze_ore", "camp_supplies"],
     "dungeonIds": ["ember_halls"],
     "pointsOfInterest": [
       "The Ember Beacon",
@@ -23,7 +23,7 @@
     "climate": "Arctic",
     "enemyIds": ["frost_troll", "glacial_wisp", "frostwarden"],
     "npcIds": ["stormcaller_ivra", "quartermaster_hagan"],
-    "gatherables": ["spring_water", "glimmer_silk"],
+    "gatherables": ["spring_water", "glimmer_silk", "camp_supplies"],
     "dungeonIds": ["frostspire_depths"],
     "pointsOfInterest": [
       "The Frozen Orrery",
@@ -39,7 +39,7 @@
     "climate": "Perpetual dusk",
     "enemyIds": ["umbral_stalker", "voidcaller", "void_revenant"],
     "npcIds": ["shade_broker", "archivist_mira"],
-    "gatherables": ["luminous_thread", "storm_essence"],
+    "gatherables": ["luminous_thread", "storm_essence", "camp_supplies"],
     "dungeonIds": ["umbral_catacombs"],
     "pointsOfInterest": [
       "The Whispering Cairn",
