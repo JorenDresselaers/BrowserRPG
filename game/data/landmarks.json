@@ -1,0 +1,169 @@
+[
+  {
+    "id": "charred_reliquary",
+    "name": "Charred Reliquary",
+    "category": "dungeon",
+    "description": "Collapsed vaults smolder beneath the pass, their embers watched by ash-marked guardians.",
+    "connectedZoneIds": ["emberglade_watch", "shiverpeak_expanse"],
+    "enemyIds": ["ember_sprite", "emberkin_guard", "ember_spirit"],
+    "gatherables": ["ember_leaf", "ember_coal"],
+    "npcIds": [],
+    "pointsOfInterest": ["Ashen prayer wheels", "Magma-lit reliquaries"],
+    "actions": [
+      {
+        "id": "raid_outer_halls",
+        "type": "reward",
+        "label": "Scavenge the reliquary",
+        "description": "Pick through the collapsed halls for salvageable relics.",
+        "rewards": {
+          "xp": 60,
+          "gold": 18,
+          "items": [
+            { "itemId": "ember_coal", "amount": 1 }
+          ]
+        },
+        "log": "You recover ember-touched relics from the reliquary's fringe chambers.",
+        "logType": "SUCCESS"
+      },
+      {
+        "id": "challenge_guardian",
+        "type": "encounter",
+        "label": "Confront the guardian spirit",
+        "description": "Draw out the reliquary's restless protector.",
+        "enemyId": "ember_spirit",
+        "log": "The reliquary's guardian surges from the smoldering vaults!",
+        "logType": "DANGER"
+      }
+    ]
+  },
+  {
+    "id": "stormfang_aerie",
+    "name": "Stormfang Aerie",
+    "category": "lair",
+    "description": "An icy overhang riddled with nests crackling with trapped stormlight.",
+    "connectedZoneIds": ["shiverpeak_expanse", "umbral_hollow"],
+    "enemyIds": ["frost_troll", "frostwarden"],
+    "gatherables": ["glimmer_silk", "storm_essence"],
+    "npcIds": [],
+    "pointsOfInterest": ["Jagged thunder nests", "Frozen wind tunnels"],
+    "actions": [
+      {
+        "id": "hunt_alpha",
+        "type": "encounter",
+        "label": "Hunt the Stormfang alpha",
+        "description": "Challenge the apex predator guarding the nests.",
+        "enemyId": "frost_troll",
+        "log": "An enraged Stormfang alpha barrels from the ice-crusted ledges!",
+        "logType": "WARNING"
+      },
+      {
+        "id": "harvest_nests",
+        "type": "reward",
+        "label": "Harvest charged nests",
+        "description": "Carefully extract storm-charged silk from the nests.",
+        "rewards": {
+          "xp": 45,
+          "gold": 22,
+          "items": [
+            { "itemId": "glimmer_silk", "amount": 2 }
+          ]
+        },
+        "log": "You gather crackling skeins of glimmer silk from the abandoned nests.",
+        "logType": "SUCCESS"
+      }
+    ]
+  },
+  {
+    "id": "veiled_sanctum",
+    "name": "Veiled Sanctum",
+    "category": "secret",
+    "description": "Hidden glyph-doors part for those who can read the shimmer of twilight.",
+    "connectedZoneIds": ["emberglade_watch", "umbral_hollow"],
+    "enemyIds": ["umbral_stalker"],
+    "gatherables": ["luminous_thread"],
+    "npcIds": [],
+    "pointsOfInterest": ["Shifting sigil mosaics", "Moonlit scriptorium"],
+    "actions": [
+      {
+        "id": "decipher_sigils",
+        "type": "check",
+        "label": "Decipher the shifting sigils",
+        "description": "Attempt to unlock the sanctum's hidden cache.",
+        "successChance": 0.6,
+        "success": {
+          "message": "The sigils flare and reveal a cache of prismatic thread!",
+          "rewards": {
+            "xp": 55,
+            "items": [
+              { "itemId": "luminous_thread", "amount": 2 }
+            ]
+          },
+          "logType": "SUCCESS"
+        },
+        "failure": {
+          "message": "The sigils lash out with a pulse of voidlight, forcing you back.",
+          "logType": "WARNING"
+        }
+      },
+      {
+        "id": "leave_offering",
+        "type": "reward",
+        "label": "Leave a moonlit offering",
+        "description": "Offer provisions to the hidden caretakers in exchange for guidance.",
+        "rewards": {
+          "xp": 25,
+          "gold": 10,
+          "recover": {
+            "healthPercent": 0.2,
+            "manaPercent": 0.2
+          }
+        },
+        "log": "Whispers of gratitude echo as soothing twilight mends your wounds.",
+        "logType": "INFO"
+      }
+    ]
+  },
+  {
+    "id": "twilight_hermitage",
+    "name": "Twilight Hermitage",
+    "category": "npc",
+    "description": "A lone scholar keeps vigil where dusk never fades, trading secrets for stories.",
+    "connectedZoneIds": ["shiverpeak_expanse", "umbral_hollow"],
+    "enemyIds": [],
+    "gatherables": ["camp_supplies"],
+    "npcIds": ["sage_elowen"],
+    "pointsOfInterest": ["Starlit lantern garden", "Chronicles etched into obsidian"],
+    "actions": [
+      {
+        "id": "share_tea",
+        "type": "reward",
+        "label": "Share twilight tea",
+        "description": "Rest with the hermit and recover beneath the starlit lanterns.",
+        "rewards": {
+          "xp": 20,
+          "recover": {
+            "healthPercent": 0.35,
+            "manaPercent": 0.35
+          },
+          "items": [
+            { "itemId": "camp_supplies", "amount": 1 }
+          ]
+        },
+        "log": "The hermit's tea soothes your spirit and replenishes your supplies.",
+        "logType": "INFO"
+      },
+      {
+        "id": "trade_insights",
+        "type": "reward",
+        "label": "Trade insights",
+        "description": "Swap tales with the hermit to glean practical guidance.",
+        "rewards": {
+          "xp": 40,
+          "gold": 28
+        },
+        "log": "You exchange hard-won lessons, leaving with keener insight and a heavier purse.",
+        "logType": "SUCCESS"
+      }
+    ]
+  }
+]
