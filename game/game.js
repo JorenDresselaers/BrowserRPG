@@ -288,6 +288,10 @@
     DANGER: 'danger'
   };
 
+  const LOG_POPUP_DURATION = 6000;
+  const LOG_POPUP_FADE_DURATION = 2500;
+  const logPopupRegistry = new WeakMap();
+
   const feedbackDefaults = {
     travel: 'Plan your journeys and respond to what unfolds on the road.',
     profession: 'Work your trade to gather resources or craft items.',
@@ -815,7 +819,7 @@
       screen.classList.toggle('active', screen.id === `screen-${screenId}`);
     });
     screenRenderers[screenId]();
-    renderLogOverlay();
+    updateLogOverlayVisibility();
     updateNavigationLocks();
   }
 
@@ -3147,7 +3151,7 @@
 
   function renderLog() {
     renderLogEntries(elements.logEntries, state.logs.slice(-100));
-    renderLogOverlay();
+    updateLogOverlayVisibility();
   }
 
   function renderLogEntries(container, entries) {
@@ -3164,29 +3168,92 @@
     container.scrollTop = container.scrollHeight;
   }
 
-  function renderLogOverlay() {
+  function hideLogOverlay() {
+    state.logOverlayOpen = false;
+    if (elements.logOverlayEntries) {
+      Array.from(elements.logOverlayEntries.children).forEach((entry) => {
+        const meta = logPopupRegistry.get(entry);
+        meta?.startFade();
+      });
+    }
+    updateLogOverlayVisibility();
+  }
+
+  function addLog(message, type = logTypes.INFO) {
+    const entry = { message, type, timestamp: Date.now() };
+    state.logs.push(entry);
+    if (state.logs.length > 100) {
+      state.logs.splice(0, state.logs.length - 100);
+    }
+    const shouldShowPopup = state.currentScreen !== 'log';
+    if (shouldShowPopup) {
+      state.logOverlayOpen = true;
+    }
+    renderLog();
+    if (shouldShowPopup) {
+      showLogPopup(entry);
+    }
+    scheduleSave();
+  }
+
+  function updateLogOverlayVisibility() {
     if (!elements.logOverlay) return;
-    renderLogEntries(elements.logOverlayEntries, state.logs.slice(-6));
-    const shouldShow = Boolean(state.logOverlayOpen && state.currentScreen !== 'log' && state.logs.length);
+    const shouldShow = Boolean(
+      state.logOverlayOpen &&
+      state.currentScreen !== 'log' &&
+      elements.logOverlayEntries?.childElementCount
+    );
     elements.logOverlay.classList.toggle('visible', shouldShow);
     elements.logOverlay.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
   }
 
-  function hideLogOverlay() {
-    state.logOverlayOpen = false;
-    renderLogOverlay();
-  }
+  function showLogPopup(entry) {
+    if (!elements.logOverlayEntries) return;
 
-  function addLog(message, type = logTypes.INFO) {
-    state.logs.push({ message, type, timestamp: Date.now() });
-    if (state.logs.length > 100) {
-      state.logs.splice(0, state.logs.length - 100);
-    }
-    if (state.currentScreen !== 'log') {
-      state.logOverlayOpen = true;
-    }
-    renderLog();
-    scheduleSave();
+    const item = document.createElement('div');
+    item.className = `log-entry ${entry.type} log-popup-entry`;
+    item.textContent = entry.message;
+    elements.logOverlayEntries.prepend(item);
+
+    updateLogOverlayVisibility();
+
+    requestAnimationFrame(() => {
+      item.classList.add('log-popup-visible');
+    });
+
+    const metadata = { cleaned: false };
+
+    metadata.startFade = () => {
+      if (metadata.cleaned || item.classList.contains('log-popup-fading')) return;
+      item.classList.add('log-popup-fading');
+    };
+
+    metadata.cleanup = () => {
+      if (metadata.cleaned) return;
+      metadata.cleaned = true;
+      window.clearTimeout(metadata.fadeTimeout);
+      window.clearTimeout(metadata.removeTimeout);
+      if (item.parentElement === elements.logOverlayEntries) {
+        item.parentElement.removeChild(item);
+      }
+      logPopupRegistry.delete(item);
+      updateLogOverlayVisibility();
+    };
+
+    const fadeDelay = Math.max(0, LOG_POPUP_DURATION - LOG_POPUP_FADE_DURATION);
+    metadata.fadeTimeout = window.setTimeout(metadata.startFade, fadeDelay);
+    metadata.removeTimeout = window.setTimeout(
+      metadata.cleanup,
+      fadeDelay + LOG_POPUP_FADE_DURATION
+    );
+
+    item.addEventListener('transitionend', (event) => {
+      if (event.propertyName === 'opacity' && item.classList.contains('log-popup-fading')) {
+        metadata.cleanup();
+      }
+    });
+
+    logPopupRegistry.set(item, metadata);
   }
 
   function restAtCamp() {
