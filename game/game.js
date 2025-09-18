@@ -4051,6 +4051,10 @@
     return dataIndex.dungeons[id];
   }
 
+  function getLandmark(id) {
+    return dataIndex.landmarks[id];
+  }
+
   function getNpc(id) {
     return dataIndex.npcs[id];
   }
