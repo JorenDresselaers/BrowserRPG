@@ -30,7 +30,8 @@
     },
     combat: createDefaultCombatState(),
     travel: createDefaultTravelState(),
-    logs: []
+    logs: [],
+    feedback: createDefaultFeedbackState()
   };
 
   const elements = {
@@ -74,6 +75,7 @@
     travelStatus: document.getElementById('travelStatus'),
     travelProgressBar: document.getElementById('travelProgressBar'),
     travelEventLog: document.getElementById('travelEventLog'),
+    travelFeedback: document.getElementById('travelFeedback'),
     combatCurrentZone: document.getElementById('combatCurrentZone'),
     enemyDetails: document.getElementById('enemyDetails'),
     combatActions: document.getElementById('combatActions'),
@@ -85,11 +87,13 @@
     combatLog: document.getElementById('combatLog'),
     npcSelect: document.getElementById('npcSelect'),
     npcDetails: document.getElementById('npcDetails'),
+    townFeedback: document.getElementById('townFeedback'),
     talkToNpcButton: document.getElementById('talkToNpcButton'),
     requestQuestButton: document.getElementById('requestQuestButton'),
     tradingCurrentZone: document.getElementById('tradingCurrentZone'),
     merchantSelect: document.getElementById('merchantSelect'),
     merchantInfo: document.getElementById('merchantInfo'),
+    tradeFeedback: document.getElementById('tradeFeedback'),
     merchantInventory: document.getElementById('merchantInventory'),
     sellInventory: document.getElementById('sellInventory'),
     refreshMerchantButton: document.getElementById('refreshMerchantButton'),
@@ -97,6 +101,7 @@
     professionDescription: document.getElementById('professionDescription'),
     professionGatherables: document.getElementById('professionGatherables'),
     professionRecipes: document.getElementById('professionRecipes'),
+    professionFeedback: document.getElementById('professionFeedback'),
     gatherButton: document.getElementById('gatherButton'),
     craftButton: document.getElementById('craftButton'),
     recipeSelect: document.getElementById('recipeSelect'),
@@ -116,6 +121,13 @@
     SUCCESS: 'success',
     WARNING: 'warning',
     DANGER: 'danger'
+  };
+
+  const feedbackDefaults = {
+    travel: 'Plan your journeys and respond to what unfolds on the road.',
+    profession: 'Work your trade to gather resources or craft items.',
+    trade: 'Choose goods to buy or sell with the merchants.',
+    town: 'Speak with residents to hear rumours or request help.'
   };
 
   const equipmentSlotMap = {
@@ -184,6 +196,47 @@
       acc[item.id] = item;
       return acc;
     }, {});
+  }
+
+  function getFeedbackElement(channel) {
+    if (channel === 'travel') return elements.travelFeedback;
+    if (channel === 'profession') return elements.professionFeedback;
+    if (channel === 'trade') return elements.tradeFeedback;
+    if (channel === 'town') return elements.townFeedback;
+    return null;
+  }
+
+  function renderFeedback(channel) {
+    const element = getFeedbackElement(channel);
+    if (!element) return;
+    const entry = state.feedback?.[channel] || null;
+    const message = entry?.message?.trim() || feedbackDefaults[channel] || '';
+    element.textContent = message;
+    element.className = 'screen-feedback';
+    if (entry?.message) {
+      element.classList.add('active');
+      if (entry.type) {
+        element.classList.add(entry.type);
+      }
+    }
+  }
+
+  function setFeedback(channel, message, type = logTypes.INFO) {
+    if (!channel || !message) return;
+    if (!state.feedback) {
+      state.feedback = createDefaultFeedbackState();
+    }
+    state.feedback[channel] = { message, type };
+    renderFeedback(channel);
+  }
+
+  function clearFeedback(channel) {
+    if (!channel) return;
+    if (!state.feedback) {
+      state.feedback = createDefaultFeedbackState();
+    }
+    state.feedback[channel] = null;
+    renderFeedback(channel);
   }
 
   function initialiseUI() {
@@ -303,6 +356,7 @@
       return;
     }
     state.player = createPlayer(name, classId);
+    state.feedback = createDefaultFeedbackState();
     setTrackedState(state.travel, 'destinationZoneId', state.player.location.zoneId);
     elements.newGameModal.classList.add('hidden');
     addLog(`Welcome, ${state.player.name} the ${getClass(classId).name}!`, logTypes.SUCCESS);
@@ -442,8 +496,11 @@
 
   function setupTownControls() {
     elements.npcSelect?.addEventListener('change', () => {
-      setTrackedState(state.selected, 'npcId', elements.npcSelect.value);
+      const changed = setTrackedState(state.selected, 'npcId', elements.npcSelect.value);
       renderNpcDetails(state.selected.npcId);
+      if (changed) {
+        clearFeedback('town');
+      }
     });
     elements.talkToNpcButton?.addEventListener('click', talkToNpc);
     elements.requestQuestButton?.addEventListener('click', requestQuestFromNpc);
@@ -452,33 +509,48 @@
   function setupTradingControls() {
     elements.merchantSelect.addEventListener('change', () => {
       if (!ensureCanAct('trade during combat')) {
+        setFeedback('trade', 'You cannot trade during combat!', logTypes.WARNING);
         elements.merchantSelect.value = state.selected.merchantId || '';
         return;
       }
-      setTrackedState(state.selected, 'merchantId', elements.merchantSelect.value);
+      const changed = setTrackedState(state.selected, 'merchantId', elements.merchantSelect.value);
+      if (changed) {
+        clearFeedback('trade');
+      }
       renderTradeScreen();
     });
     elements.refreshMerchantButton.addEventListener('click', () => {
-      if (!ensureCanAct('negotiate with merchants')) return;
+      if (!ensureCanAct('negotiate with merchants')) {
+        setFeedback('trade', 'You cannot negotiate with merchants while engaged in combat!', logTypes.WARNING);
+        return;
+      }
       if (!state.selected.merchantId) return;
-      addLog('The merchant refreshes their stock with new wares.', logTypes.INFO);
+      const message = 'The merchant refreshes their stock with new wares.';
+      addLog(message, logTypes.INFO);
+      setFeedback('trade', message, logTypes.INFO);
       renderTradeScreen(true);
     });
   }
 
   function setupProfessionControls() {
     elements.professionSelect.addEventListener('change', () => {
-      setTrackedState(state.selected, 'professionId', elements.professionSelect.value);
+      const changed = setTrackedState(state.selected, 'professionId', elements.professionSelect.value);
       setTrackedState(state.selected, 'recipeId', null);
+      if (changed) {
+        clearFeedback('profession');
+      }
       renderProfessionPanel();
     });
     elements.recipeSelect.addEventListener('change', () => {
       setTrackedState(state.selected, 'recipeId', elements.recipeSelect.value);
+      clearFeedback('profession');
     });
     elements.gatherButton.addEventListener('click', gatherResources);
     elements.craftButton.addEventListener('click', () => {
       if (!state.selected.recipeId) {
-        addLog('Select a recipe before attempting to craft.', logTypes.WARNING);
+        const warning = 'Select a recipe before attempting to craft.';
+        addLog(warning, logTypes.WARNING);
+        setFeedback('profession', warning, logTypes.WARNING);
         return;
       }
       craftRecipe(state.selected.recipeId);
@@ -635,6 +707,7 @@
     updateTravelFocusButtons();
     renderTravelJourney();
     renderTravelEventLog();
+    renderFeedback('travel');
     if (elements.beginTravelButton) {
       elements.beginTravelButton.disabled = state.combat.active || Boolean(state.travel.journey);
     }
@@ -738,6 +811,9 @@
     }
     state.travel.focus = focus;
     updateTravelFocusButtons();
+    const focusLabel =
+      focus === 'gathering' ? 'Gathering' : focus === 'combat' ? 'Hunting' : 'Balanced';
+    setFeedback('travel', `Travel focus set to ${focusLabel}.`, logTypes.INFO);
     scheduleSave();
   }
 
@@ -750,20 +826,26 @@
 
   function beginJourney() {
     if (!state.player) return;
-    if (!ensureCanAct('begin a journey')) return;
+    if (!ensureCanAct('begin a journey', { feedbackChannel: 'travel' })) return;
     if (state.travel.journey) {
-      addLog('You are already on the road. Advance the current journey or cancel it.', logTypes.WARNING);
+      const warning = 'You are already on the road. Advance the current journey or cancel it.';
+      addLog(warning, logTypes.WARNING);
+      setFeedback('travel', warning, logTypes.WARNING);
       return;
     }
     const destinationId = elements.travelDestinationSelect?.value || state.travel.destinationZoneId;
     const destination = getZone(destinationId);
     if (!destination) {
-      addLog('Select a valid destination before travelling.', logTypes.WARNING);
+      const warning = 'Select a valid destination before travelling.';
+      addLog(warning, logTypes.WARNING);
+      setFeedback('travel', warning, logTypes.WARNING);
       return;
     }
     const currentZone = getCurrentZone();
     if (currentZone?.id === destination.id) {
-      addLog('You already reside in that locale.', logTypes.INFO);
+      const info = 'You already reside in that locale.';
+      addLog(info, logTypes.INFO);
+      setFeedback('travel', info, logTypes.INFO);
       return;
     }
     const totalSteps = Math.max(2, 3 + Math.floor(Math.random() * 4));
@@ -786,14 +868,18 @@
     if (!state.player) return;
     const journey = state.travel.journey;
     if (!journey) {
-      addLog('Begin a journey before marching onward.', logTypes.WARNING);
+      const warning = 'Begin a journey before marching onward.';
+      addLog(warning, logTypes.WARNING);
+      setFeedback('travel', warning, logTypes.WARNING);
       return;
     }
     if (journey.pausedForCombat) {
-      addLog('Resolve the current combat before continuing your travels.', logTypes.WARNING);
+      const warning = 'Resolve the current combat before continuing your travels.';
+      addLog(warning, logTypes.WARNING);
+      setFeedback('travel', warning, logTypes.WARNING);
       return;
     }
-    if (!ensureCanAct('continue travelling')) return;
+    if (!ensureCanAct('continue travelling', { feedbackChannel: 'travel' })) return;
     journey.progress = Math.min(journey.totalSteps, journey.progress + 1);
     const event = resolveTravelTurnEvent(journey);
     if (event.type === 'encounter') {
@@ -850,7 +936,9 @@
 
   function cancelJourney() {
     if (!state.travel.journey) {
-      addLog('No journey to cancel.', logTypes.INFO);
+      const info = 'No journey to cancel.';
+      addLog(info, logTypes.INFO);
+      setFeedback('travel', info, logTypes.INFO);
       return;
     }
     addLog('You break camp and postpone the journey.', logTypes.WARNING);
@@ -881,6 +969,7 @@
     if (state.travel.events.length > 8) {
       state.travel.events.splice(0, state.travel.events.length - 8);
     }
+    setFeedback('travel', message, type);
     renderTravelEventLog();
     scheduleSave();
   }
@@ -1568,11 +1657,13 @@
     const npcs = (zone?.npcIds || [])
       .map((npcId) => getNpc(npcId))
       .filter(Boolean);
+    const noResidentMessage = 'No residents are available to speak with in this area.';
     if (!npcs.length) {
       elements.npcSelect.innerHTML = '<option>No allies nearby</option>';
       elements.npcSelect.disabled = true;
       elements.npcDetails.textContent = 'Travel to another zone to meet new allies.';
       setTrackedState(state.selected, 'npcId', null);
+      setFeedback('town', noResidentMessage, logTypes.INFO);
       return;
     }
     elements.npcSelect.disabled = false;
@@ -1580,10 +1671,16 @@
       .map((npc) => `<option value=\"${npc.id}\">${npc.name}</option>`)
       .join('');
     if (!state.selected.npcId || !npcs.some((npc) => npc.id === state.selected.npcId)) {
-      setTrackedState(state.selected, 'npcId', npcs[0].id);
+      if (setTrackedState(state.selected, 'npcId', npcs[0].id)) {
+        clearFeedback('town');
+      }
     }
     elements.npcSelect.value = state.selected.npcId;
     renderNpcDetails(state.selected.npcId);
+    if (state.feedback?.town?.message === noResidentMessage) {
+      clearFeedback('town');
+    }
+    renderFeedback('town');
   }
 
   function renderNpcDetails(npcId) {
@@ -1603,26 +1700,38 @@
   }
 
   function talkToNpc() {
-    if (!ensureCanAct('chat with allies')) return;
+    if (!ensureCanAct('chat with allies')) {
+      setFeedback('town', 'You cannot chat with allies while engaged in combat!', logTypes.WARNING);
+      return;
+    }
     const npc = getNpc(state.selected.npcId);
     if (!npc) return;
     const line = sample(npc.dialogue || []) || `${npc.name} nods silently.`;
-    addLog(`${npc.name} says: “${line}”`, logTypes.INFO);
+    const message = `${npc.name} says: “${line}”`;
+    addLog(message, logTypes.INFO);
+    setFeedback('town', message, logTypes.INFO);
     updateQuestProgress('talk', npc.id, 1);
   }
 
   function requestQuestFromNpc() {
-    if (!ensureCanAct('request quests')) return;
+    if (!ensureCanAct('request quests')) {
+      setFeedback('town', 'You cannot request quests while engaged in combat!', logTypes.WARNING);
+      return;
+    }
     const npc = getNpc(state.selected.npcId);
     if (!npc) return;
     const availableQuest = (npc.questIds || []).find((questId) => !hasQuest(questId));
     if (!availableQuest) {
-      addLog(`${npc.name} has no new tasks for you right now.`, logTypes.INFO);
+      const info = `${npc.name} has no new tasks for you right now.`;
+      addLog(info, logTypes.INFO);
+      setFeedback('town', info, logTypes.INFO);
       return;
     }
     addQuestToPlayer(state.player, availableQuest);
     updateQuestLogView();
-    addLog(`${npc.name} entrusts you with the quest \"${getQuest(availableQuest).name}\".`, logTypes.SUCCESS);
+    const questMessage = `${npc.name} entrusts you with the quest "${getQuest(availableQuest).name}".`;
+    addLog(questMessage, logTypes.SUCCESS);
+    setFeedback('town', questMessage, logTypes.SUCCESS);
   }
 
   function hasQuest(questId) {
@@ -1639,11 +1748,16 @@
     }
     const merchants = populateMerchants();
     const merchant = merchants.find((npc) => npc.id === state.selected.merchantId) || null;
+    const noMerchantMessage = 'No merchants are operating in this area. Travel elsewhere to trade.';
     if (!merchant) {
       elements.merchantInfo.textContent = 'No merchants are operating in this area.';
       elements.merchantInventory.innerHTML = '';
       elements.sellInventory.innerHTML = '';
+      setFeedback('trade', noMerchantMessage, logTypes.INFO);
       return;
+    }
+    if (state.feedback?.trade?.message === noMerchantMessage) {
+      clearFeedback('trade');
     }
     elements.merchantInfo.innerHTML = `
       <p><strong>${merchant.name}</strong> — ${merchant.title}</p>
@@ -1652,6 +1766,7 @@
     `;
     renderMerchantStock(merchant, forceRefresh);
     renderSellableItems(merchant);
+    renderFeedback('trade');
   }
 
   function populateMerchants() {
@@ -1670,7 +1785,9 @@
       .map((npc) => `<option value=\"${npc.id}\">${npc.name}</option>`)
       .join('');
     if (!state.selected.merchantId || !merchants.some((npc) => npc.id === state.selected.merchantId)) {
-      setTrackedState(state.selected, 'merchantId', merchants[0].id);
+      if (setTrackedState(state.selected, 'merchantId', merchants[0].id)) {
+        clearFeedback('trade');
+      }
     }
     elements.merchantSelect.value = state.selected.merchantId;
     return merchants;
@@ -1732,6 +1849,7 @@
       elements.professionGatherables.innerHTML = '';
       elements.professionRecipes.innerHTML = '';
       elements.recipeSelect.innerHTML = '';
+      renderFeedback('profession');
       return;
     }
     elements.professionDescription.textContent = profession.description;
@@ -1769,29 +1887,44 @@
         `;
       })
       .join('') || '<p>No recipes available.</p>';
+    renderFeedback('profession');
   }
 
   function populateProfessionSelect() {
     const professions = (state.player?.professions || []).map((id) => getProfession(id)).filter(Boolean);
     if (!professions.length) {
       elements.professionSelect.innerHTML = '<option>No professions trained</option>';
+      setFeedback('profession', 'Train a profession to begin gathering or crafting.', logTypes.INFO);
       return;
     }
     elements.professionSelect.innerHTML = professions
       .map((profession) => `<option value=\"${profession.id}\">${profession.name}</option>`)
       .join('');
     if (!state.selected.professionId || !professions.some((p) => p.id === state.selected.professionId)) {
-      setTrackedState(state.selected, 'professionId', professions[0].id);
+      if (setTrackedState(state.selected, 'professionId', professions[0].id)) {
+        clearFeedback('profession');
+      }
     }
     elements.professionSelect.value = state.selected.professionId;
   }
 
   function gatherResources() {
     if (!state.player) return;
-    if (!ensureCanAct('gather resources')) return;
+    if (!ensureCanAct('gather resources')) {
+      setFeedback('profession', 'You cannot gather resources while engaged in combat!', logTypes.WARNING);
+      return;
+    }
     const profession = getProfession(state.selected.professionId);
-    if (!profession || !(profession.gatherables || []).length) {
-      addLog('This profession has no resources to gather.', logTypes.INFO);
+    if (!profession) {
+      const info = 'Train a profession to begin gathering or crafting.';
+      addLog(info, logTypes.INFO);
+      setFeedback('profession', info, logTypes.INFO);
+      return;
+    }
+    if (!(profession.gatherables || []).length) {
+      const info = 'This profession has no resources to gather.';
+      addLog(info, logTypes.INFO);
+      setFeedback('profession', info, logTypes.INFO);
       return;
     }
     const zone = getCurrentZone();
@@ -1799,30 +1932,43 @@
     const itemId = sample(possible.length ? possible : profession.gatherables);
     const amount = Math.random() < 0.25 ? 2 : 1;
     grantItem(state.player, itemId, amount);
-    addLog(
-      `You gather ${amount} ${getItem(itemId).name} while working in ${zone?.name || 'the wilds'}.`,
-      logTypes.SUCCESS
-    );
+    const message = `You gather ${amount} ${getItem(itemId).name} while working in ${zone?.name || 'the wilds'}.`;
+    addLog(message, logTypes.SUCCESS);
+    setFeedback('profession', message, logTypes.SUCCESS);
     renderInventory();
     updateQuestProgress('collect', itemId, amount);
   }
 
   function craftRecipe(itemId) {
-    if (!ensureCanAct('craft items')) return;
+    if (!ensureCanAct('craft items')) {
+      setFeedback('profession', 'You cannot craft items while engaged in combat!', logTypes.WARNING);
+      return;
+    }
     const profession = getProfession(state.selected.professionId);
-    if (!profession) return;
+    if (!profession) {
+      const info = 'Train a profession to begin gathering or crafting.';
+      addLog(info, logTypes.INFO);
+      setFeedback('profession', info, logTypes.INFO);
+      return;
+    }
     const recipe = (profession.crafts || []).find((entry) => entry.itemId === itemId);
     if (!recipe) {
-      addLog('Recipe not found.', logTypes.WARNING);
+      const message = 'Recipe not found.';
+      addLog(message, logTypes.WARNING);
+      setFeedback('profession', message, logTypes.WARNING);
       return;
     }
     if (!hasCraftingMaterials(recipe.requirements)) {
-      addLog('Missing materials for this recipe.', logTypes.WARNING);
+      const warning = 'Missing materials for this recipe.';
+      addLog(warning, logTypes.WARNING);
+      setFeedback('profession', warning, logTypes.WARNING);
       return;
     }
     consumeMaterials(recipe.requirements);
     grantItem(state.player, recipe.itemId, 1);
-    addLog(`You craft ${getItem(recipe.itemId).name}.`, logTypes.SUCCESS);
+    const success = `You craft ${getItem(recipe.itemId).name}.`;
+    addLog(success, logTypes.SUCCESS);
+    setFeedback('profession', success, logTypes.SUCCESS);
     renderInventory();
   }
 
@@ -2070,38 +2216,62 @@
   }
 
   function handlePurchase(itemId) {
-    if (!ensureCanAct('trade during combat')) return;
+    if (!ensureCanAct('trade during combat')) {
+      setFeedback('trade', 'You cannot trade during combat!', logTypes.WARNING);
+      return;
+    }
     const merchant = getNpc(state.selected.merchantId);
-    if (!merchant) return;
+    if (!merchant) {
+      setFeedback('trade', 'No merchant is available to trade right now.', logTypes.INFO);
+      return;
+    }
     const entry = (merchant.inventory || []).find((stock) => stock.itemId === itemId);
-    if (!entry) return;
+    if (!entry) {
+      setFeedback('trade', 'That item is no longer available.', logTypes.INFO);
+      return;
+    }
     const item = getItem(itemId);
     const price = entry.price ?? item.value ?? 5;
     if (state.player.gold < price) {
-      addLog('You cannot afford that purchase.', logTypes.WARNING);
+      const warning = 'You cannot afford that purchase.';
+      addLog(warning, logTypes.WARNING);
+      setFeedback('trade', warning, logTypes.WARNING);
       return;
     }
     state.player.gold -= price;
     grantItem(state.player, itemId, 1);
-    addLog(`You purchase ${item.name} for ${price} gold.`, logTypes.SUCCESS);
+    const message = `You purchase ${item.name} for ${price} gold.`;
+    addLog(message, logTypes.SUCCESS);
+    setFeedback('trade', message, logTypes.SUCCESS);
     renderInventory();
     updatePlayerPanel();
+    renderTradeScreen();
   }
 
   function handleSale(itemId) {
-    if (!ensureCanAct('trade during combat')) return;
+    if (!ensureCanAct('trade during combat')) {
+      setFeedback('trade', 'You cannot trade during combat!', logTypes.WARNING);
+      return;
+    }
     const merchant = getNpc(state.selected.merchantId);
-    if (!merchant) return;
+    if (!merchant) {
+      setFeedback('trade', 'No merchant is available to trade right now.', logTypes.INFO);
+      return;
+    }
     const quantity = state.player.inventory[itemId] || 0;
     if (!quantity) {
-      addLog('You have none of that item to sell.', logTypes.WARNING);
+      const warning = 'You have none of that item to sell.';
+      addLog(warning, logTypes.WARNING);
+      setFeedback('trade', warning, logTypes.WARNING);
       return;
     }
     const item = getItem(itemId);
     const price = Math.max(1, Math.round((item.value || 1) * 0.6));
     removeItem(state.player, itemId, 1);
     state.player.gold += price;
-    addLog(`You sell ${item.name} for ${price} gold.`, logTypes.INFO);
+    const message = `You sell ${item.name} for ${price} gold.`;
+    addLog(message, logTypes.INFO);
+    setFeedback('trade', message, logTypes.INFO);
     renderInventory();
     updatePlayerPanel();
     renderTradeScreen();
@@ -2271,12 +2441,15 @@
     return Boolean(state.combat.active);
   }
 
-  function ensureCanAct(actionDescription) {
+  function ensureCanAct(actionDescription, options = {}) {
     if (isInCombat()) {
       const message = actionDescription
         ? `You cannot ${actionDescription} while engaged in combat!`
         : 'You are locked in combat and cannot act.';
       addLog(message, logTypes.WARNING);
+      if (options.feedbackChannel) {
+        setFeedback(options.feedbackChannel, message, logTypes.WARNING);
+      }
       return false;
     }
     return true;
@@ -2387,6 +2560,7 @@
   function hydrateStateFromSave(saved) {
     state.player = saved.player;
     normaliseLoadedPlayer(state.player);
+    state.feedback = createDefaultFeedbackState();
     state.currentScreen = saved.currentScreen && screenRenderers[saved.currentScreen]
       ? saved.currentScreen
       : 'character';
@@ -2546,6 +2720,15 @@
       focus: 'balanced',
       journey: null,
       events: []
+    };
+  }
+
+  function createDefaultFeedbackState() {
+    return {
+      travel: null,
+      profession: null,
+      trade: null,
+      town: null
     };
   }
 
