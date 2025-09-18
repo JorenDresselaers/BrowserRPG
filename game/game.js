@@ -54,6 +54,42 @@
       defenseMitigation: 0.15,
       minimumDamage: 9,
       description: 'Call down a spear of radiant flame.'
+    },
+    Shieldwall: {
+      usesPerRest: 2,
+      manaCost: 18,
+      damageMultiplier: 0.85,
+      bonusDamage: 6,
+      defenseMitigation: 0.55,
+      minimumDamage: 6,
+      description: 'Brace behind your shield to absorb most of the enemy\'s counterattack.'
+    },
+    'Arrow Storm': {
+      usesPerRest: 3,
+      manaCost: 20,
+      damageMultiplier: 1.3,
+      bonusDamage: 6,
+      defenseMitigation: 0.1,
+      minimumDamage: 10,
+      description: 'Unleash a storm of arrows that overwhelms your foe.'
+    },
+    'Static Torrent': {
+      usesPerRest: 2,
+      manaCost: 24,
+      damageMultiplier: 1.4,
+      bonusDamage: 12,
+      defenseMitigation: 0.05,
+      minimumDamage: 14,
+      description: 'Channel a torrent of crackling energy that devastates your enemy.'
+    },
+    'Solar Aegis': {
+      usesPerRest: 2,
+      manaCost: 18,
+      damageMultiplier: 1,
+      bonusDamage: 8,
+      defenseMitigation: 0.28,
+      minimumDamage: 9,
+      description: 'Surround yourself with radiant light, striking while hardening your defenses.'
     }
   };
 
@@ -70,7 +106,8 @@
       npcId: null,
       merchantId: null,
       professionId: null,
-      recipeId: null
+      recipeId: null,
+      abilityName: null
     },
     combat: createDefaultCombatState(),
     travel: createDefaultTravelState(),
@@ -102,6 +139,10 @@
     manaValue: document.getElementById('manaValue'),
     playerStats: document.getElementById('playerStats'),
     playerAbilities: document.getElementById('playerAbilities'),
+    talentTree: document.getElementById('talentTree'),
+    talentTreeName: document.getElementById('talentTreeName'),
+    talentPoints: document.getElementById('talentPoints'),
+    talentFeedback: document.getElementById('talentFeedback'),
     playerProfessions: document.getElementById('playerProfessions'),
     playerEquipment: document.getElementById('playerEquipment'),
     inventoryPanel: document.getElementById('inventoryPanel'),
@@ -174,7 +215,8 @@
     travel: 'Plan your journeys and respond to what unfolds on the road.',
     profession: 'Work your trade to gather resources or craft items.',
     trade: 'Choose goods to buy or sell with the merchants.',
-    town: 'Speak with residents, patrol the streets, or request help.'
+    town: 'Speak with residents, patrol the streets, or request help.',
+    talent: 'Spend talent points to unlock new strengths for your hero.'
   };
 
   const equipmentSlotMap = {
@@ -250,6 +292,7 @@
     if (channel === 'profession') return elements.professionFeedback;
     if (channel === 'trade') return elements.tradeFeedback;
     if (channel === 'town') return elements.townFeedback;
+    if (channel === 'talent') return elements.talentFeedback;
     return null;
   }
 
@@ -297,6 +340,8 @@
     setupTownControls();
     setupTradingControls();
     setupProfessionControls();
+    setupAbilitySelection();
+    setupTalentControls();
     elements.restButton.addEventListener('click', restAtCamp);
     const restored = restoreSavedGame();
     if (!restored) {
@@ -404,6 +449,7 @@
     }
     state.player = createPlayer(name, classId);
     state.feedback = createDefaultFeedbackState();
+    sanitizeSelectedAbility();
     setTrackedState(state.travel, 'destinationZoneId', state.player.location.zoneId);
     elements.newGameModal.classList.add('hidden');
     addLog(`Welcome, ${state.player.name} the ${getClass(classId).name}!`, logTypes.SUCCESS);
@@ -458,6 +504,7 @@
     (classData.startingQuests || []).forEach((questId) => {
       addQuestToPlayer(player, questId);
     });
+    ensureTalentState(player);
     syncResourceCaps(player);
     resetAbilityUses(player);
     return player;
@@ -610,6 +657,30 @@
       craftRecipe(state.selected.recipeId);
     });
   }
+
+  function setupAbilitySelection() {
+    if (!elements.playerAbilities) return;
+    elements.playerAbilities.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-ability-name]');
+      if (!button) return;
+      const abilityName = button.dataset.abilityName;
+      if (!abilityName || !state.player?.abilities?.includes(abilityName)) return;
+      if (setTrackedState(state.selected, 'abilityName', abilityName)) {
+        renderPlayerAbilities();
+        renderCombatState();
+        scheduleSave();
+      }
+    });
+  }
+
+  function setupTalentControls() {
+    if (!elements.talentTree) return;
+    elements.talentTree.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-talent-node]');
+      if (!button || button.disabled) return;
+      unlockTalent(button.dataset.talentNode);
+    });
+  }
   function toggleOverlay(panel, open) {
     if (!panel) return;
     panel.classList.toggle('open', open);
@@ -669,11 +740,13 @@
 
   function updatePlayerPanel() {
     const player = state.player;
+    ensureTalentState(player);
     const playerClass = getClass(player.classId);
     const maxHealth = getTotalStat(player, 'health');
     const maxMana = getTotalStat(player, 'mana');
     const timeline = ensureTimeline(player);
     ensureAbilityState(player);
+    sanitizeSelectedAbility();
     elements.playerName.textContent = player.name;
     elements.playerClass.textContent = playerClass?.name || '-';
     elements.playerLevel.textContent = player.level;
@@ -716,11 +789,19 @@
   }
 
   function renderPlayerAbilities() {
-    const abilities = state.player?.abilities || [];
+    const player = state.player;
+    if (!player) {
+      elements.playerAbilities.innerHTML = '<li>No abilities learned yet.</li>';
+      return;
+    }
+    ensureAbilityState(player);
+    sanitizeSelectedAbility();
+    const abilities = player.abilities || [];
     if (!abilities.length) {
       elements.playerAbilities.innerHTML = '<li>No abilities learned yet.</li>';
       return;
     }
+    const activeAbility = getActiveAbilityName();
     const items = abilities
       .map((abilityName) => {
         const definition = getAbilityDefinition(abilityName);
@@ -729,12 +810,246 @@
         const usesLabel = Number.isFinite(usesPerRest)
           ? `${usesRemaining}/${usesPerRest} uses per rest`
           : 'At-will';
-        const manaLabel = definition?.manaCost != null ? `${definition.manaCost} mana` : 'mana cost varies';
-        const description = definition?.description ? ` — ${definition.description}` : '';
-        return `<li><strong>${abilityName}</strong> — ${usesLabel}, ${manaLabel}${description}</li>`;
+        const manaCost = getAbilityManaCostForPlayer(player, definition);
+        const manaLabel = Number.isFinite(manaCost) ? `${manaCost} mana` : 'mana cost varies';
+        const description = definition?.description
+          ? `<span class="ability-entry__description">${definition.description}</span>`
+          : '';
+        const activeClass = abilityName === activeAbility ? ' active' : '';
+        const statusBadge = abilityName === activeAbility
+          ? '<span class="ability-entry__badge">Active</span>'
+          : '';
+        return `
+          <li>
+            <button type="button" class="ability-entry${activeClass}" data-ability-name="${abilityName}">
+              <span class="ability-entry__name">${abilityName}</span>
+              <span class="ability-entry__meta">${usesLabel} • ${manaLabel}</span>
+              ${description}
+              ${statusBadge}
+            </button>
+          </li>
+        `;
       })
       .join('');
     elements.playerAbilities.innerHTML = items;
+  }
+
+  function renderTalentPanel() {
+    if (!elements.talentTree) return;
+    const player = state.player;
+    if (!player) {
+      elements.talentTree.innerHTML = '<p class="empty">Create a hero to view talents.</p>';
+      if (elements.talentPoints) {
+        elements.talentPoints.textContent = '0';
+      }
+      if (elements.talentTreeName) {
+        elements.talentTreeName.textContent = 'No discipline';
+      }
+      renderFeedback('talent');
+      return;
+    }
+    ensureTalentState(player);
+    const tree = getPlayerTalentTree(player);
+    const talents = player.talents;
+    if (elements.talentPoints) {
+      elements.talentPoints.textContent = `${talents.points}`;
+    }
+    if (elements.talentTreeName) {
+      elements.talentTreeName.textContent = tree?.name || 'No recorded path';
+    }
+    if (!tree || !(tree.nodes || []).length) {
+      elements.talentTree.innerHTML = '<p class="empty">This class has no talents configured yet.</p>';
+      renderFeedback('talent');
+      return;
+    }
+    const grouped = groupTalentsByTier(tree.nodes || []);
+    const tierMarkup = grouped
+      .map(({ tier, nodes }) => {
+        const nodesMarkup = nodes.map((node) => renderTalentNode(player, node)).join('');
+        return `
+          <section class="talent-tier" data-tier="${tier}">
+            <header class="talent-tier__header">
+              <h4>Tier ${tier}</h4>
+            </header>
+            <div class="talent-tier__nodes">
+              ${nodesMarkup || '<p class="empty">No talents in this tier.</p>'}
+            </div>
+          </section>
+        `;
+      })
+      .join('');
+    elements.talentTree.innerHTML = tierMarkup || '<p class="empty">No talents available.</p>';
+    renderFeedback('talent');
+  }
+
+  function renderTalentNode(player, node) {
+    const talents = player.talents || { selections: [], points: 0, spent: 0 };
+    const unlocked = talents.selections.includes(node.id);
+    const cost = Math.max(1, Math.floor(node.cost ?? 1));
+    const unmetRequirements = getUnmetTalentRequirements(player, node);
+    const hasPoints = talents.points >= cost;
+    const available = !unlocked && hasPoints && !unmetRequirements.length;
+    const statusText = unlocked
+      ? 'Unlocked'
+      : available
+      ? `Unlock for ${cost} point${cost !== 1 ? 's' : ''}`
+      : unmetRequirements.length
+      ? `Requires: ${unmetRequirements.join(', ')}`
+      : `Need ${cost} point${cost !== 1 ? 's' : ''}`;
+    const typeLabel = node.type ? toTitle(node.type) : 'Talent';
+    const metaParts = [`Cost: ${cost} point${cost !== 1 ? 's' : ''}`];
+    if (node.minLevel) {
+      metaParts.push(`Level ${node.minLevel}`);
+    }
+    if (node.minSpent) {
+      metaParts.push(`${node.minSpent} point${node.minSpent !== 1 ? 's' : ''} spent`);
+    }
+    if ((node.requires || []).length) {
+      const requiredNames = (node.requires || [])
+        .map((id) => getTalentNodeDefinition(player, id)?.name || toTitle(id))
+        .join(', ');
+      metaParts.push(`Requires ${requiredNames}`);
+    }
+    const description = node.description
+      ? `<p class="talent-node__description">${node.description}</p>`
+      : '';
+    const passiveNote = node.passive?.description
+      ? `<p class="talent-node__passive">${node.passive.description}</p>`
+      : '';
+    const classes = ['talent-node'];
+    if (unlocked) {
+      classes.push('talent-node--unlocked');
+    } else if (available) {
+      classes.push('talent-node--available');
+    } else {
+      classes.push('talent-node--locked');
+    }
+    return `
+      <button type="button" class="${classes.join(' ')}" data-talent-node="${node.id}" ${
+        unlocked ? 'disabled' : ''
+      }>
+        <span class="talent-node__type">${typeLabel}</span>
+        <span class="talent-node__name">${node.name}</span>
+        ${description}
+        ${passiveNote}
+        <span class="talent-node__meta">${metaParts.join(' • ')}</span>
+        <span class="talent-node__status">${statusText}</span>
+      </button>
+    `;
+  }
+
+  function groupTalentsByTier(nodes) {
+    const tiers = new Map();
+    nodes.forEach((node) => {
+      const tier = Number.isFinite(node.tier) ? node.tier : 1;
+      if (!tiers.has(tier)) {
+        tiers.set(tier, []);
+      }
+      tiers.get(tier).push(node);
+    });
+    return Array.from(tiers.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([tier, tierNodes]) => ({
+        tier,
+        nodes: tierNodes.sort((a, b) => {
+          const orderA = Number.isFinite(a.order) ? a.order : 0;
+          const orderB = Number.isFinite(b.order) ? b.order : 0;
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+          return (a.name || '').localeCompare(b.name || '');
+        })
+      }));
+  }
+
+  function unlockTalent(nodeId) {
+    const player = state.player;
+    if (!player || !nodeId) return;
+    ensureTalentState(player);
+    const node = getTalentNodeDefinition(player, nodeId);
+    if (!node) {
+      setFeedback('talent', 'That talent could not be found.', logTypes.WARNING);
+      return;
+    }
+    if (player.talents.selections.includes(nodeId)) {
+      setFeedback('talent', 'You have already mastered that talent.', logTypes.INFO);
+      return;
+    }
+    const cost = Math.max(1, Math.floor(node.cost ?? 1));
+    const unmet = getUnmetTalentRequirements(player, node);
+    if (unmet.length) {
+      const message = `You must satisfy: ${unmet.join(', ')}.`;
+      setFeedback('talent', message, logTypes.WARNING);
+      return;
+    }
+    const availablePoints = Math.floor(player.talents.points || 0);
+    if (availablePoints < cost) {
+      const missing = cost - availablePoints;
+      const message = `You need ${missing} more talent point${missing !== 1 ? 's' : ''}.`;
+      setFeedback('talent', message, logTypes.WARNING);
+      return;
+    }
+    player.talents.selections.push(nodeId);
+    player.talents.points = Math.max(0, availablePoints - cost);
+    player.talents.spent = Math.max(0, Math.floor((player.talents.spent || 0) + cost));
+    const messages = [`Talent learned: ${node.name}.`];
+    const grantedAbilities = Array.isArray(node.grantAbility)
+      ? node.grantAbility
+      : node.grantAbility
+      ? [node.grantAbility]
+      : [];
+    const newAbilities = [];
+    grantedAbilities.forEach((abilityName) => {
+      if (!abilityName) return;
+      if (!player.abilities.includes(abilityName)) {
+        player.abilities.push(abilityName);
+        newAbilities.push(abilityName);
+      }
+    });
+    if (newAbilities.length) {
+      ensureAbilityState(player);
+      resetAbilityUses(player);
+      setTrackedState(state.selected, 'abilityName', newAbilities[newAbilities.length - 1]);
+      messages.push(`New ability learned: ${newAbilities.join(', ')}.`);
+    }
+    if (node.statBonuses) {
+      const statSummary = Object.entries(node.statBonuses)
+        .map(([stat, value]) => `${toTitle(stat)} ${value >= 0 ? '+' : ''}${value}`)
+        .join(', ');
+      if (statSummary) {
+        messages.push(`Stat bonuses unlocked: ${statSummary}.`);
+      }
+    }
+    if (node.passive?.name) {
+      messages.push(`Passive unlocked: ${node.passive.name}.`);
+    }
+    const summary = messages.join(' ');
+    addLog(summary, logTypes.SUCCESS);
+    setFeedback('talent', summary, logTypes.SUCCESS);
+    syncResourceCaps(player);
+    sanitizeSelectedAbility();
+    renderTalentPanel();
+    updatePlayerPanel();
+    scheduleSave();
+  }
+
+  function getUnmetTalentRequirements(player, node) {
+    const requirements = [];
+    if (!player || !node) return requirements;
+    const talents = player.talents || { selections: [], spent: 0 };
+    if (node.minLevel && player.level < node.minLevel) {
+      requirements.push(`Level ${node.minLevel}`);
+    }
+    if (node.minSpent && (talents.spent || 0) < node.minSpent) {
+      requirements.push(`${node.minSpent} point${node.minSpent !== 1 ? 's' : ''} spent`);
+    }
+    (node.requires || []).forEach((requirementId) => {
+      if (!talents.selections.includes(requirementId)) {
+        const requirementNode = getTalentNodeDefinition(player, requirementId);
+        requirements.push(requirementNode?.name || toTitle(requirementId));
+      }
+    });
+    return requirements;
   }
 
   function renderPlayerProfessions() {
@@ -766,6 +1081,7 @@
   }
 
   function renderCharacterScreen() {
+    renderTalentPanel();
     renderProfessionPanel();
   }
 
@@ -1296,7 +1612,7 @@
       ensureAbilityState(player);
     }
     if (elements.combatAbilityButton) {
-      const abilityName = player?.abilities?.[0];
+      const abilityName = getActiveAbilityName();
       const abilityDefinition = abilityName ? getAbilityDefinition(abilityName) : null;
       const usesRemaining = abilityName ? getAbilityUsesRemaining(abilityName) : Infinity;
       const usesText = abilityDefinition && Number.isFinite(abilityDefinition.usesPerRest)
@@ -1327,7 +1643,7 @@
       return;
     }
     if (elements.combatAbilityButton) {
-      const abilityName = player.abilities?.[0];
+      const abilityName = getActiveAbilityName();
       const abilityDefinition = abilityName ? getAbilityDefinition(abilityName) : null;
       if (!abilityName) {
         elements.combatAbilityButton.disabled = true;
@@ -1338,8 +1654,11 @@
       ) {
         elements.combatAbilityButton.disabled = true;
       }
-      if (abilityDefinition && state.combat.playerMana < (abilityDefinition.manaCost ?? 0)) {
-        elements.combatAbilityButton.disabled = true;
+      if (abilityDefinition) {
+        const manaCost = getAbilityManaCostForPlayer(player, abilityDefinition);
+        if (state.combat.playerMana < manaCost) {
+          elements.combatAbilityButton.disabled = true;
+        }
       }
     }
     const playerMaxHealth = getTotalStat(player, 'health');
@@ -1561,14 +1880,14 @@
       actionPerformed = true;
     } else if (action === 'ability') {
       ensureAbilityState(player);
-      const abilityName = player.abilities?.[0];
+      const abilityName = getActiveAbilityName();
       if (!abilityName) {
         addCombatLog('You have no special techniques prepared.', logTypes.WARNING);
         renderCombatState();
         return;
       }
       const abilityDefinition = getAbilityDefinition(abilityName);
-      const manaCost = abilityDefinition?.manaCost ?? 15;
+      const manaCost = getAbilityManaCostForPlayer(player, abilityDefinition) ?? 15;
       const usesRemaining = getAbilityUsesRemaining(abilityName);
       if (Number.isFinite(abilityDefinition?.usesPerRest) && usesRemaining <= 0) {
         addCombatLog(`You have no remaining uses of ${abilityName}. Rest to recover.`, logTypes.WARNING);
@@ -1632,7 +1951,9 @@
       Math.round(enemy.stats.power * (0.85 + Math.random() * 0.3) - playerDefense * 0.4)
     );
     if (state.combat.guard) {
-      damage = Math.round(damage * 0.5);
+      const modifiers = getTalentModifiers(player);
+      const guardReduction = clamp(0.5 + (modifiers.guardDamageReductionBonus || 0), 0, 0.95);
+      damage = Math.round(damage * (1 - guardReduction));
       state.combat.guard = false;
       addCombatLog('Your guard absorbs part of the blow.', logTypes.INFO);
     }
@@ -1770,12 +2091,22 @@
 
   function calculatePlayerAttack() {
     const player = state.player;
-    const base = player.stats.strength + player.stats.agility * 0.5 + player.stats.intellect * 0.3;
+    if (!player) return 0;
+    const strength = getTotalStat(player, 'strength');
+    const agility = getTotalStat(player, 'agility');
+    const intellect = getTotalStat(player, 'intellect');
+    const base = strength + agility * 0.5 + intellect * 0.3;
     const equipmentBonus = ['weapon', 'offHand', 'trinket']
       .map((slot) => getItem(player.equipment[slot]))
       .filter(Boolean)
       .reduce((sum, item) => sum + (item.stats?.attack || item.stats?.spellPower || 0), 0);
-    return base + equipmentBonus + player.level * 1.5;
+    const modifiers = getTalentModifiers(player);
+    let total = base + equipmentBonus + player.level * 1.5;
+    total += modifiers.attackBonusFlat || 0;
+    if (modifiers.attackMultiplier) {
+      total *= 1 + modifiers.attackMultiplier;
+    }
+    return total;
   }
 
   function renderTownScreen() {
@@ -2611,12 +2942,29 @@
 
   function levelUpPlayer() {
     const player = state.player;
+    if (!player) return;
+    const previousTotal = player.talents ? player.talents.points + player.talents.spent : 0;
+    ensureTalentState(player);
     Object.entries(player.growth || {}).forEach(([stat, value]) => {
       player.stats[stat] = (player.stats[stat] || 0) + value;
     });
     player.resources.health = getTotalStat(player, 'health');
     player.resources.mana = getTotalStat(player, 'mana');
+    ensureTalentState(player);
+    const currentTotal = player.talents.points + player.talents.spent;
+    const gainedTalentPoints = Math.max(0, currentTotal - previousTotal);
     addLog(`You reach level ${player.level}! Attributes have improved.`, logTypes.SUCCESS);
+    if (gainedTalentPoints > 0) {
+      addLog(
+        `You gain ${gainedTalentPoints} talent point${gainedTalentPoints > 1 ? 's' : ''}.`,
+        logTypes.INFO
+      );
+      setFeedback(
+        'talent',
+        `New talent point earned! Spend it to deepen your ${getClass(player.classId)?.role || 'class'} specialisation.`,
+        logTypes.SUCCESS
+      );
+    }
   }
 
   function renderLog() {
@@ -2728,6 +3076,159 @@
     return abilityLibrary[abilityName] || null;
   }
 
+  function getClassTalentTree(classId) {
+    const classData = getClass(classId);
+    return classData?.talentTree || null;
+  }
+
+  function getPlayerTalentTree(player) {
+    if (!player) return null;
+    return getClassTalentTree(player.classId);
+  }
+
+  function getTalentNodeDefinition(context, nodeId) {
+    if (!nodeId) return null;
+    const tree = typeof context === 'string' ? getClassTalentTree(context) : getPlayerTalentTree(context);
+    if (!tree) return null;
+    return (tree.nodes || []).find((entry) => entry.id === nodeId) || null;
+  }
+
+  function getPlayerTalentNodes(player) {
+    if (!player) return [];
+    const tree = getPlayerTalentTree(player);
+    if (!tree) return [];
+    const map = new Map((tree.nodes || []).map((node) => [node.id, node]));
+    return (player.talents?.selections || []).map((id) => map.get(id)).filter(Boolean);
+  }
+
+  function getTalentStatBonus(player, stat) {
+    if (!player || !stat) return 0;
+    return getPlayerTalentNodes(player).reduce((total, node) => total + (node.statBonuses?.[stat] || 0), 0);
+  }
+
+  function getTalentModifiers(player) {
+    const modifiers = {
+      guardDamageReductionBonus: 0,
+      healthRegenPercent: 0,
+      manaRegenPercent: 0,
+      attackBonusFlat: 0,
+      attackMultiplier: 0,
+      abilityManaCostReductionFlat: 0,
+      abilityManaCostReductionPercent: 0
+    };
+    if (!player) {
+      return modifiers;
+    }
+    getPlayerTalentNodes(player).forEach((node) => {
+      const passiveMods = node.passive?.modifiers || {};
+      if (passiveMods.guardDamageReductionBonus) {
+        modifiers.guardDamageReductionBonus += passiveMods.guardDamageReductionBonus;
+      }
+      if (passiveMods.healthRegenPercent) {
+        modifiers.healthRegenPercent += passiveMods.healthRegenPercent;
+      }
+      if (passiveMods.manaRegenPercent) {
+        modifiers.manaRegenPercent += passiveMods.manaRegenPercent;
+      }
+      if (passiveMods.attackBonusFlat) {
+        modifiers.attackBonusFlat += passiveMods.attackBonusFlat;
+      }
+      if (passiveMods.attackMultiplier) {
+        modifiers.attackMultiplier += passiveMods.attackMultiplier;
+      }
+      if (passiveMods.abilityManaCostReductionFlat) {
+        modifiers.abilityManaCostReductionFlat += passiveMods.abilityManaCostReductionFlat;
+      }
+      if (passiveMods.abilityManaCostReductionPercent) {
+        modifiers.abilityManaCostReductionPercent += passiveMods.abilityManaCostReductionPercent;
+      }
+    });
+    return modifiers;
+  }
+
+  function getAbilityManaCostForPlayer(player, abilityDefinition) {
+    if (!abilityDefinition || abilityDefinition.manaCost == null) {
+      return abilityDefinition?.manaCost ?? null;
+    }
+    if (!Number.isFinite(abilityDefinition.manaCost)) {
+      return abilityDefinition.manaCost;
+    }
+    let cost = abilityDefinition.manaCost;
+    if (!player) {
+      return Math.max(0, Math.round(cost));
+    }
+    const modifiers = getTalentModifiers(player);
+    cost -= modifiers.abilityManaCostReductionFlat || 0;
+    const percent = clamp(modifiers.abilityManaCostReductionPercent || 0, -0.9, 0.9);
+    cost *= 1 - percent;
+    return Math.max(0, Math.round(cost));
+  }
+
+  function getActiveAbilityName() {
+    const player = state.player;
+    if (!player) return null;
+    ensureAbilityState(player);
+    const abilities = player.abilities || [];
+    if (!abilities.length) return null;
+    const selected = state.selected.abilityName;
+    if (selected && abilities.includes(selected)) {
+      return selected;
+    }
+    return abilities[0];
+  }
+
+  function sanitizeSelectedAbility() {
+    const player = state.player;
+    if (!player) return;
+    ensureAbilityState(player);
+    const abilities = player.abilities || [];
+    const selected = state.selected.abilityName;
+    if (!abilities.length) {
+      if (selected) {
+        setTrackedState(state.selected, 'abilityName', null);
+      }
+      return;
+    }
+    if (!selected || !abilities.includes(selected)) {
+      setTrackedState(state.selected, 'abilityName', abilities[0]);
+    }
+  }
+
+  function ensureTalentState(player) {
+    if (!player) return;
+    const classData = getClass(player.classId) || {};
+    const tree = classData.talentTree || null;
+    if (!player.talents || typeof player.talents !== 'object') {
+      player.talents = {
+        treeId: tree?.id || classData.id || 'general',
+        points: 0,
+        spent: 0,
+        selections: []
+      };
+    }
+    const talents = player.talents;
+    if (!Array.isArray(talents.selections)) {
+      talents.selections = [];
+    }
+    const nodeMap = new Map((tree?.nodes || []).map((node) => [node.id, node]));
+    talents.selections = talents.selections.filter((id) => nodeMap.has(id));
+    talents.spent = talents.selections.reduce(
+      (sum, id) => sum + Math.max(1, Math.floor(nodeMap.get(id)?.cost ?? 1)),
+      0
+    );
+    const perLevel = Number.isFinite(classData.talentPointsPerLevel) ? classData.talentPointsPerLevel : 1;
+    const starting = Number.isFinite(classData.startingTalentPoints) ? classData.startingTalentPoints : 1;
+    const earned = Math.max(0, starting + Math.max(0, player.level - 1) * perLevel);
+    const recorded = talents.points + talents.spent;
+    if (recorded < earned) {
+      talents.points += earned - recorded;
+    } else if (recorded > earned) {
+      talents.points = Math.max(0, earned - talents.spent);
+    }
+    talents.points = Math.max(0, Math.floor(talents.points));
+    talents.treeId = tree?.id || talents.treeId || classData.id || 'general';
+  }
+
   function ensureAbilityState(player) {
     if (!player) return;
     if (!Array.isArray(player.abilities)) {
@@ -2801,8 +3302,11 @@
     if (!player) return;
     const maxHealth = getTotalStat(player, 'health');
     const maxMana = getTotalStat(player, 'mana');
-    const healthRegen = Math.max(1, Math.round(maxHealth * PASSIVE_HEALTH_REGEN_RATE));
-    const manaRegen = Math.max(1, Math.round(maxMana * PASSIVE_MANA_REGEN_RATE));
+    const modifiers = getTalentModifiers(player);
+    const healthRegenRate = PASSIVE_HEALTH_REGEN_RATE + (modifiers.healthRegenPercent || 0);
+    const manaRegenRate = PASSIVE_MANA_REGEN_RATE + (modifiers.manaRegenPercent || 0);
+    const healthRegen = Math.max(1, Math.round(maxHealth * healthRegenRate));
+    const manaRegen = Math.max(1, Math.round(maxMana * manaRegenRate));
     player.resources.health = clamp((player.resources.health || 0) + healthRegen, 0, maxHealth);
     player.resources.mana = clamp((player.resources.mana || 0) + manaRegen, 0, maxMana);
   }
@@ -2833,7 +3337,8 @@
       .map((itemId) => getItem(itemId))
       .filter(Boolean)
       .reduce((sum, item) => sum + (item.stats?.[stat] || 0), 0);
-    return base + equipmentBonus;
+    const talentBonus = getTalentStatBonus(player, stat);
+    return base + equipmentBonus + talentBonus;
   }
 
   function sample(collection) {
@@ -2915,6 +3420,7 @@
     state.combat = createDefaultCombatState();
     sanitizeLoadedState();
     syncResourceCaps(state.player);
+    sanitizeSelectedAbility();
     elements.newGameModal.classList.add('hidden');
     updateAllUI();
     showScreen(state.currentScreen);
@@ -2941,6 +3447,7 @@
       .filter(Boolean);
     ensureTimeline(player);
     ensureAbilityState(player);
+    ensureTalentState(player);
   }
 
   function rehydrateQuestEntry(entry) {
@@ -3061,7 +3568,8 @@
       travel: null,
       profession: null,
       trade: null,
-      town: null
+      town: null,
+      talent: null
     };
   }
 

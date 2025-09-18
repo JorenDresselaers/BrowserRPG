@@ -34,8 +34,204 @@
     ],
     "startingArmor": "leather_vest",
     "startingGold": 18,
-    "startingProfessions": ["mining", "blacksmithing"],
-    "startingQuests": ["emberguard_watch"]
+    "startingProfessions": [
+      "mining",
+      "blacksmithing"
+    ],
+    "startingQuests": [
+      "emberguard_watch"
+    ],
+    "startingTalentPoints": 1,
+    "talentPointsPerLevel": 1,
+    "talentTree": {
+      "id": "warden_bulwark",
+      "name": "Bulwark Discipline",
+      "description": "Hone impenetrable defenses while returning punishing blows.",
+      "nodes": [
+        {
+          "id": "warden_iron_guard",
+          "name": "Iron Guard",
+          "type": "passive",
+          "tier": 1,
+          "order": 1,
+          "cost": 1,
+          "description": "Reinforce your guard with disciplined posture.",
+          "statBonuses": {
+            "health": 10,
+            "armor": 2
+          },
+          "passive": {
+            "name": "Steadfast Vigil",
+            "description": "Guarding reduces incoming damage by an additional 10%.",
+            "modifiers": {
+              "guardDamageReductionBonus": 0.1
+            }
+          }
+        },
+        {
+          "id": "warden_shield_training",
+          "name": "Shield Training",
+          "type": "hybrid",
+          "tier": 1,
+          "order": 2,
+          "cost": 1,
+          "description": "Drills with heavy shields strengthen your counterstrikes.",
+          "statBonuses": {
+            "strength": 2,
+            "armor": 3
+          },
+          "passive": {
+            "name": "Shield Bash Expertise",
+            "description": "Your attacks deal 2 additional damage.",
+            "modifiers": {
+              "attackBonusFlat": 2
+            }
+          }
+        },
+        {
+          "id": "warden_ember_resolve",
+          "name": "Ember Resolve",
+          "type": "passive",
+          "tier": 1,
+          "order": 3,
+          "cost": 1,
+          "description": "The Ember's warmth steels you against attrition.",
+          "statBonuses": {
+            "health": 8
+          },
+          "passive": {
+            "name": "Stoking Embers",
+            "description": "Regenerate 2% additional health while resting or guarding.",
+            "modifiers": {
+              "healthRegenPercent": 0.02
+            }
+          }
+        },
+        {
+          "id": "warden_shieldwall_tactics",
+          "name": "Shieldwall Tactics",
+          "type": "ability",
+          "tier": 2,
+          "order": 1,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "warden_iron_guard"
+          ],
+          "description": "Adopt the legendary shieldwall to weather brutal assaults.",
+          "grantAbility": "Shieldwall",
+          "passive": {
+            "name": "Resolute Stand",
+            "description": "Guarding reduces damage by an additional 15%.",
+            "modifiers": {
+              "guardDamageReductionBonus": 0.15
+            }
+          }
+        },
+        {
+          "id": "warden_bulwark_mastery",
+          "name": "Bulwark Mastery",
+          "type": "passive",
+          "tier": 2,
+          "order": 2,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "warden_shield_training"
+          ],
+          "description": "Your armor turns aside even crushing blows.",
+          "statBonuses": {
+            "health": 12,
+            "armor": 4
+          },
+          "passive": {
+            "name": "Battle Momentum",
+            "description": "Basic attacks deal 10% more damage.",
+            "modifiers": {
+              "attackMultiplier": 0.1
+            }
+          }
+        },
+        {
+          "id": "warden_inspiring_bulwark",
+          "name": "Inspiring Bulwark",
+          "type": "passive",
+          "tier": 2,
+          "order": 3,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "warden_ember_resolve"
+          ],
+          "description": "Your presence inspires allies and fuels perseverance.",
+          "statBonuses": {
+            "mana": 10
+          },
+          "passive": {
+            "name": "Renewed Purpose",
+            "description": "Passive healing increases by 3% and abilities cost 1 less mana.",
+            "modifiers": {
+              "healthRegenPercent": 0.03,
+              "abilityManaCostReductionFlat": 1
+            }
+          }
+        },
+        {
+          "id": "warden_phoenix_sentinel",
+          "name": "Phoenix Sentinel",
+          "type": "passive",
+          "tier": 3,
+          "order": 1,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "warden_inspiring_bulwark"
+          ],
+          "description": "Channel the Ember's flames to rise after every onslaught.",
+          "statBonuses": {
+            "health": 20,
+            "strength": 3
+          },
+          "passive": {
+            "name": "Undying Flames",
+            "description": "Regenerate 5% more health and gain +2 attack power.",
+            "modifiers": {
+              "healthRegenPercent": 0.05,
+              "attackBonusFlat": 2
+            }
+          }
+        },
+        {
+          "id": "warden_unbreakable_aegis",
+          "name": "Unbreakable Aegis",
+          "type": "passive",
+          "tier": 3,
+          "order": 2,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "warden_shieldwall_tactics"
+          ],
+          "description": "Become a walking bastion immune to attrition.",
+          "statBonuses": {
+            "armor": 6
+          },
+          "passive": {
+            "name": "Immortal Wall",
+            "description": "Guarding reduces damage by 10% more and your attacks strike 5% harder.",
+            "modifiers": {
+              "guardDamageReductionBonus": 0.1,
+              "attackMultiplier": 0.05
+            }
+          }
+        }
+      ]
+    }
   },
   {
     "id": "ranger",
@@ -72,8 +268,206 @@
     ],
     "startingArmor": "leather_vest",
     "startingGold": 22,
-    "startingProfessions": ["herbalism", "alchemy"],
-    "startingQuests": ["emberguard_watch"]
+    "startingProfessions": [
+      "herbalism",
+      "alchemy"
+    ],
+    "startingQuests": [
+      "emberguard_watch"
+    ],
+    "startingTalentPoints": 1,
+    "talentPointsPerLevel": 1,
+    "talentTree": {
+      "id": "ranger_pathfinder",
+      "name": "Pathfinder's Reach",
+      "description": "Blend precision and cunning to master the wild hunt.",
+      "nodes": [
+        {
+          "id": "ranger_keen_senses",
+          "name": "Keen Senses",
+          "type": "passive",
+          "tier": 1,
+          "order": 1,
+          "cost": 1,
+          "description": "Sharpen your instincts for the hunt.",
+          "statBonuses": {
+            "agility": 2,
+            "speed": 2
+          },
+          "passive": {
+            "name": "Predator's Focus",
+            "description": "Your attacks deal 5% more damage.",
+            "modifiers": {
+              "attackMultiplier": 0.05
+            }
+          }
+        },
+        {
+          "id": "ranger_wayfinder",
+          "name": "Wayfinder's Rest",
+          "type": "passive",
+          "tier": 1,
+          "order": 2,
+          "cost": 1,
+          "description": "Learn to recover while on the move.",
+          "statBonuses": {
+            "health": 6,
+            "mana": 6
+          },
+          "passive": {
+            "name": "Tireless Trekker",
+            "description": "Regenerate 2% extra health and mana during downtime.",
+            "modifiers": {
+              "healthRegenPercent": 0.02,
+              "manaRegenPercent": 0.02
+            }
+          }
+        },
+        {
+          "id": "ranger_quick_draw",
+          "name": "Quick Draw",
+          "type": "passive",
+          "tier": 1,
+          "order": 3,
+          "cost": 1,
+          "description": "Practice seamless transitions between strikes and shots.",
+          "statBonuses": {
+            "strength": 1,
+            "agility": 1
+          },
+          "passive": {
+            "name": "Swift Preparation",
+            "description": "Special abilities cost 1 less mana.",
+            "modifiers": {
+              "abilityManaCostReductionFlat": 1
+            }
+          }
+        },
+        {
+          "id": "ranger_arrow_storm",
+          "name": "Arrow Storm",
+          "type": "ability",
+          "tier": 2,
+          "order": 1,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "ranger_keen_senses"
+          ],
+          "description": "Unleash a deluge of arrows to overwhelm foes.",
+          "grantAbility": "Arrow Storm",
+          "passive": {
+            "name": "Overwhelming Volley",
+            "description": "Your arrows strike 10% harder.",
+            "modifiers": {
+              "attackMultiplier": 0.1
+            }
+          }
+        },
+        {
+          "id": "ranger_pack_tactics",
+          "name": "Pack Tactics",
+          "type": "passive",
+          "tier": 2,
+          "order": 2,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "ranger_wayfinder"
+          ],
+          "description": "Coordinate seamlessly with beast and ally alike.",
+          "statBonuses": {
+            "health": 10
+          },
+          "passive": {
+            "name": "Coordinated Assault",
+            "description": "Attacks deal 2 additional damage and your mana recovers 3% faster.",
+            "modifiers": {
+              "attackBonusFlat": 2,
+              "manaRegenPercent": 0.03
+            }
+          }
+        },
+        {
+          "id": "ranger_camouflage_mastery",
+          "name": "Camouflage Mastery",
+          "type": "passive",
+          "tier": 2,
+          "order": 3,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "ranger_quick_draw"
+          ],
+          "description": "Fade from sight between each lethal strike.",
+          "statBonuses": {
+            "agility": 3,
+            "speed": 1
+          },
+          "passive": {
+            "name": "Ghost Step",
+            "description": "Special abilities cost 10% less mana.",
+            "modifiers": {
+              "abilityManaCostReductionPercent": 0.1
+            }
+          }
+        },
+        {
+          "id": "ranger_predators_zenith",
+          "name": "Predator's Zenith",
+          "type": "passive",
+          "tier": 3,
+          "order": 1,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "ranger_arrow_storm"
+          ],
+          "description": "Become the apex hunter of the Emberwilds.",
+          "statBonuses": {
+            "agility": 4,
+            "intellect": 2
+          },
+          "passive": {
+            "name": "Relentless Pursuit",
+            "description": "Your attacks deal 15% more damage.",
+            "modifiers": {
+              "attackMultiplier": 0.15
+            }
+          }
+        },
+        {
+          "id": "ranger_natures_grace",
+          "name": "Nature's Grace",
+          "type": "passive",
+          "tier": 3,
+          "order": 2,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "ranger_pack_tactics"
+          ],
+          "description": "The wilds shelter you, mending wounds in moments.",
+          "statBonuses": {
+            "health": 14,
+            "mana": 12
+          },
+          "passive": {
+            "name": "Emerald Recovery",
+            "description": "Regenerate 5% more health and mana.",
+            "modifiers": {
+              "healthRegenPercent": 0.05,
+              "manaRegenPercent": 0.05
+            }
+          }
+        }
+      ]
+    }
   },
   {
     "id": "arcanist",
@@ -110,8 +504,205 @@
     ],
     "startingArmor": "acolyte_robes",
     "startingGold": 20,
-    "startingProfessions": ["enchanting", "tailoring"],
-    "startingQuests": ["emberguard_watch", "arcanists_request"]
+    "startingProfessions": [
+      "enchanting",
+      "tailoring"
+    ],
+    "startingQuests": [
+      "emberguard_watch",
+      "arcanists_request"
+    ],
+    "startingTalentPoints": 1,
+    "talentPointsPerLevel": 1,
+    "talentTree": {
+      "id": "arcanist_stormweaver",
+      "name": "Stormweaver Secrets",
+      "description": "Command the storm to devastate foes and outlast sieges.",
+      "nodes": [
+        {
+          "id": "arcanist_arcane_studies",
+          "name": "Arcane Studies",
+          "type": "passive",
+          "tier": 1,
+          "order": 1,
+          "cost": 1,
+          "description": "Deepen your understanding of storm sigils.",
+          "statBonuses": {
+            "intellect": 3,
+            "mana": 12
+          },
+          "passive": {
+            "name": "Sigil Efficiency",
+            "description": "Special abilities cost 1 less mana.",
+            "modifiers": {
+              "abilityManaCostReductionFlat": 1
+            }
+          }
+        },
+        {
+          "id": "arcanist_crackling_reserves",
+          "name": "Crackling Reserves",
+          "type": "passive",
+          "tier": 1,
+          "order": 2,
+          "cost": 1,
+          "description": "Hold more power at the ready.",
+          "statBonuses": {
+            "mana": 15,
+            "health": 5
+          },
+          "passive": {
+            "name": "Charged Reprieve",
+            "description": "Regenerate 3% more mana while resting.",
+            "modifiers": {
+              "manaRegenPercent": 0.03
+            }
+          }
+        },
+        {
+          "id": "arcanist_voltaic_pulse",
+          "name": "Voltaic Pulse",
+          "type": "passive",
+          "tier": 1,
+          "order": 3,
+          "cost": 1,
+          "description": "Channel bursts of power through every spell.",
+          "statBonuses": {
+            "intellect": 2
+          },
+          "passive": {
+            "name": "Charged Blasts",
+            "description": "Your spells deal 7% more damage.",
+            "modifiers": {
+              "attackMultiplier": 0.07
+            }
+          }
+        },
+        {
+          "id": "arcanist_static_torrent",
+          "name": "Static Torrent",
+          "type": "ability",
+          "tier": 2,
+          "order": 1,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "arcanist_arcane_studies"
+          ],
+          "description": "Release a devastating torrent of lightning.",
+          "grantAbility": "Static Torrent",
+          "passive": {
+            "name": "Overcharge",
+            "description": "Your spells deal 10% more damage.",
+            "modifiers": {
+              "attackMultiplier": 0.1
+            }
+          }
+        },
+        {
+          "id": "arcanist_focus_siphon",
+          "name": "Focus Siphon",
+          "type": "passive",
+          "tier": 2,
+          "order": 2,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "arcanist_crackling_reserves"
+          ],
+          "description": "Steal ambient charge to fuel your casting.",
+          "statBonuses": {
+            "mana": 18
+          },
+          "passive": {
+            "name": "Arcane Flow",
+            "description": "Regenerate 5% more mana and reduce ability mana costs by 10%.",
+            "modifiers": {
+              "manaRegenPercent": 0.05,
+              "abilityManaCostReductionPercent": 0.1
+            }
+          }
+        },
+        {
+          "id": "arcanist_storm_barrier_mastery",
+          "name": "Storm Barrier Mastery",
+          "type": "passive",
+          "tier": 2,
+          "order": 3,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "arcanist_voltaic_pulse"
+          ],
+          "description": "Wrap yourself in roiling lightning when threatened.",
+          "statBonuses": {
+            "health": 8,
+            "armor": 2
+          },
+          "passive": {
+            "name": "Static Ward",
+            "description": "Your guard reduces damage by an additional 10%.",
+            "modifiers": {
+              "guardDamageReductionBonus": 0.1
+            }
+          }
+        },
+        {
+          "id": "arcanist_eye_of_the_tempest",
+          "name": "Eye of the Tempest",
+          "type": "passive",
+          "tier": 3,
+          "order": 1,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "arcanist_static_torrent"
+          ],
+          "description": "Command the calm center within every storm.",
+          "statBonuses": {
+            "intellect": 4,
+            "mana": 20
+          },
+          "passive": {
+            "name": "Tempest Lord",
+            "description": "Your spells deal 15% more damage.",
+            "modifiers": {
+              "attackMultiplier": 0.15
+            }
+          }
+        },
+        {
+          "id": "arcanist_arc_lattice",
+          "name": "Arc Lattice",
+          "type": "passive",
+          "tier": 3,
+          "order": 2,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "arcanist_focus_siphon"
+          ],
+          "description": "Weave power into a self-sustaining lattice.",
+          "statBonuses": {
+            "health": 12,
+            "mana": 18
+          },
+          "passive": {
+            "name": "Living Conduit",
+            "description": "Regenerate 6% more mana and abilities cost 2 less mana.",
+            "modifiers": {
+              "manaRegenPercent": 0.06,
+              "abilityManaCostReductionFlat": 2
+            }
+          }
+        }
+      ]
+    }
   },
   {
     "id": "templar",
@@ -148,7 +739,205 @@
     ],
     "startingArmor": "acolyte_robes",
     "startingGold": 21,
-    "startingProfessions": ["herbalism", "enchanting"],
-    "startingQuests": ["emberguard_watch"]
+    "startingProfessions": [
+      "herbalism",
+      "enchanting"
+    ],
+    "startingQuests": [
+      "emberguard_watch"
+    ],
+    "startingTalentPoints": 1,
+    "talentPointsPerLevel": 1,
+    "talentTree": {
+      "id": "templar_radiant_covenant",
+      "name": "Radiant Covenant",
+      "description": "Wield consecrated steel while mending the faithful.",
+      "nodes": [
+        {
+          "id": "templar_sunlit_blade",
+          "name": "Sunlit Blade",
+          "type": "passive",
+          "tier": 1,
+          "order": 1,
+          "cost": 1,
+          "description": "Imbue your strikes with radiant warmth.",
+          "statBonuses": {
+            "strength": 2,
+            "intellect": 1
+          },
+          "passive": {
+            "name": "Radiant Edge",
+            "description": "Your attacks deal 5% more damage.",
+            "modifiers": {
+              "attackMultiplier": 0.05
+            }
+          }
+        },
+        {
+          "id": "templar_devoted_guardian",
+          "name": "Devoted Guardian",
+          "type": "passive",
+          "tier": 1,
+          "order": 2,
+          "cost": 1,
+          "description": "Blend martial and divine training to protect others.",
+          "statBonuses": {
+            "health": 8,
+            "armor": 2
+          },
+          "passive": {
+            "name": "Sacred Bulwark",
+            "description": "Guarding reduces damage by an additional 10%.",
+            "modifiers": {
+              "guardDamageReductionBonus": 0.1
+            }
+          }
+        },
+        {
+          "id": "templar_celestial_reserve",
+          "name": "Celestial Reserve",
+          "type": "passive",
+          "tier": 1,
+          "order": 3,
+          "cost": 1,
+          "description": "Carry a deeper well of radiant energy.",
+          "statBonuses": {
+            "mana": 12
+          },
+          "passive": {
+            "name": "Kindled Grace",
+            "description": "Regenerate 3% more mana between battles.",
+            "modifiers": {
+              "manaRegenPercent": 0.03
+            }
+          }
+        },
+        {
+          "id": "templar_solar_aegis",
+          "name": "Solar Aegis",
+          "type": "ability",
+          "tier": 2,
+          "order": 1,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "templar_devoted_guardian"
+          ],
+          "description": "Unleash radiant shields that scorch attackers.",
+          "grantAbility": "Solar Aegis",
+          "passive": {
+            "name": "Shimmering Ward",
+            "description": "Guarding reduces damage by an additional 10%.",
+            "modifiers": {
+              "guardDamageReductionBonus": 0.1
+            }
+          }
+        },
+        {
+          "id": "templar_radiant_mending",
+          "name": "Radiant Mending",
+          "type": "passive",
+          "tier": 2,
+          "order": 2,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "templar_celestial_reserve"
+          ],
+          "description": "Channel healing light through your armor.",
+          "statBonuses": {
+            "health": 10,
+            "mana": 8
+          },
+          "passive": {
+            "name": "Soothing Brilliance",
+            "description": "Regenerate 4% more health and mana.",
+            "modifiers": {
+              "healthRegenPercent": 0.04,
+              "manaRegenPercent": 0.04
+            }
+          }
+        },
+        {
+          "id": "templar_smite_the_dusk",
+          "name": "Smite the Dusk",
+          "type": "passive",
+          "tier": 2,
+          "order": 3,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "templar_sunlit_blade"
+          ],
+          "description": "Focus divine wrath into precise strikes.",
+          "statBonuses": {
+            "strength": 2,
+            "intellect": 2
+          },
+          "passive": {
+            "name": "Luminous Wrath",
+            "description": "Your attacks deal 10% more damage.",
+            "modifiers": {
+              "attackMultiplier": 0.1
+            }
+          }
+        },
+        {
+          "id": "templar_avatar_of_light",
+          "name": "Avatar of Light",
+          "type": "passive",
+          "tier": 3,
+          "order": 1,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "templar_solar_aegis"
+          ],
+          "description": "Become the living manifestation of radiant justice.",
+          "statBonuses": {
+            "health": 18,
+            "intellect": 3
+          },
+          "passive": {
+            "name": "Dawn Unending",
+            "description": "Regenerate 5% more health and your attacks deal 5% more damage.",
+            "modifiers": {
+              "healthRegenPercent": 0.05,
+              "attackMultiplier": 0.05
+            }
+          }
+        },
+        {
+          "id": "templar_sanctified_blade",
+          "name": "Sanctified Blade",
+          "type": "passive",
+          "tier": 3,
+          "order": 2,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "templar_smite_the_dusk"
+          ],
+          "description": "Your blade sings with unquenchable brilliance.",
+          "statBonuses": {
+            "strength": 3,
+            "mana": 10
+          },
+          "passive": {
+            "name": "Consecrated Edge",
+            "description": "Abilities cost 2 less mana and deal 10% more damage.",
+            "modifiers": {
+              "abilityManaCostReductionFlat": 2,
+              "attackMultiplier": 0.1
+            }
+          }
+        }
+      ]
+    }
   }
 ]
