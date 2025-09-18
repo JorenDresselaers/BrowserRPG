@@ -108,6 +108,27 @@
           }
         },
         {
+          "id": "warden_phalanx_footing",
+          "name": "Phalanx Footing",
+          "type": "passive",
+          "tier": 1,
+          "order": 4,
+          "cost": 1,
+          "description": "Anchor your stance so the shieldwall never breaks.",
+          "statBonuses": {
+            "strength": 1,
+            "armor": 2
+          },
+          "passive": {
+            "name": "Anchored Guard",
+            "description": "Guarding reduces damage by an additional 5% and your counters strike +1 harder.",
+            "modifiers": {
+              "guardDamageReductionBonus": 0.05,
+              "attackBonusFlat": 1
+            }
+          }
+        },
+        {
           "id": "warden_shieldwall_tactics",
           "name": "Shieldwall Tactics",
           "type": "ability",
@@ -180,6 +201,30 @@
           }
         },
         {
+          "id": "warden_reinforced_riposte",
+          "name": "Reinforced Riposte",
+          "type": "passive",
+          "tier": 2,
+          "order": 4,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "warden_phalanx_footing"
+          ],
+          "description": "Turn every block into a punishing retaliation.",
+          "statBonuses": {
+            "strength": 2
+          },
+          "passive": {
+            "name": "Counterstrike Drill",
+            "description": "Your retaliation strikes deal 12% more damage.",
+            "modifiers": {
+              "attackMultiplier": 0.12
+            }
+          }
+        },
+        {
           "id": "warden_phoenix_sentinel",
           "name": "Phoenix Sentinel",
           "type": "passive",
@@ -227,6 +272,32 @@
             "modifiers": {
               "guardDamageReductionBonus": 0.1,
               "attackMultiplier": 0.05
+            }
+          }
+        },
+        {
+          "id": "warden_bastion_commander",
+          "name": "Bastion Commander",
+          "type": "passive",
+          "tier": 3,
+          "order": 3,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "warden_reinforced_riposte"
+          ],
+          "description": "Direct the shieldwall with unshakable authority.",
+          "statBonuses": {
+            "health": 16,
+            "armor": 4
+          },
+          "passive": {
+            "name": "Bulwark Captain",
+            "description": "Guarding reduces damage by an additional 5% and your presence restores 3% more health.",
+            "modifiers": {
+              "guardDamageReductionBonus": 0.05,
+              "healthRegenPercent": 0.03
             }
           }
         }
@@ -344,6 +415,27 @@
           }
         },
         {
+          "id": "ranger_field_trapper",
+          "name": "Field Trapper",
+          "type": "passive",
+          "tier": 1,
+          "order": 4,
+          "cost": 1,
+          "description": "Lay snares and distractions to dictate the hunt.",
+          "statBonuses": {
+            "agility": 1,
+            "health": 6
+          },
+          "passive": {
+            "name": "Tethered Prey",
+            "description": "Your attacks deal 4% more damage and abilities cost 5% less mana.",
+            "modifiers": {
+              "attackMultiplier": 0.04,
+              "abilityManaCostReductionPercent": 0.05
+            }
+          }
+        },
+        {
           "id": "ranger_arrow_storm",
           "name": "Arrow Storm",
           "type": "ability",
@@ -416,6 +508,32 @@
           }
         },
         {
+          "id": "ranger_hunters_preparation",
+          "name": "Hunter's Preparation",
+          "type": "passive",
+          "tier": 2,
+          "order": 4,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "ranger_field_trapper"
+          ],
+          "description": "Plan each strike so foes never recover.",
+          "statBonuses": {
+            "agility": 2,
+            "intellect": 1
+          },
+          "passive": {
+            "name": "Methodical Hunt",
+            "description": "Your attacks deal 8% more damage and regenerate 3% more mana.",
+            "modifiers": {
+              "attackMultiplier": 0.08,
+              "manaRegenPercent": 0.03
+            }
+          }
+        },
+        {
           "id": "ranger_predators_zenith",
           "name": "Predator's Zenith",
           "type": "passive",
@@ -463,6 +581,32 @@
             "modifiers": {
               "healthRegenPercent": 0.05,
               "manaRegenPercent": 0.05
+            }
+          }
+        },
+        {
+          "id": "ranger_shadow_pounce",
+          "name": "Shadow Pounce",
+          "type": "passive",
+          "tier": 3,
+          "order": 3,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "ranger_hunters_preparation"
+          ],
+          "description": "Exploit every opening to strike where foes least expect it.",
+          "statBonuses": {
+            "agility": 3,
+            "speed": 2
+          },
+          "passive": {
+            "name": "Opportune Volley",
+            "description": "Your attacks deal 12% more damage and abilities cost 1 less mana.",
+            "modifiers": {
+              "attackMultiplier": 0.12,
+              "abilityManaCostReductionFlat": 1
             }
           }
         }
@@ -579,6 +723,27 @@
           }
         },
         {
+          "id": "arcanist_storm_scholar",
+          "name": "Storm Scholar",
+          "type": "passive",
+          "tier": 1,
+          "order": 4,
+          "cost": 1,
+          "description": "Commit esoteric storm treatises to memory.",
+          "statBonuses": {
+            "intellect": 2,
+            "mana": 10
+          },
+          "passive": {
+            "name": "Scholar's Focus",
+            "description": "Regenerate 3% more mana and abilities cost 5% less mana.",
+            "modifiers": {
+              "manaRegenPercent": 0.03,
+              "abilityManaCostReductionPercent": 0.05
+            }
+          }
+        },
+        {
           "id": "arcanist_static_torrent",
           "name": "Static Torrent",
           "type": "ability",
@@ -651,6 +816,31 @@
           }
         },
         {
+          "id": "arcanist_resonant_conduit",
+          "name": "Resonant Conduit",
+          "type": "passive",
+          "tier": 2,
+          "order": 4,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "arcanist_storm_scholar"
+          ],
+          "description": "Shape every bolt to feed the next surge of power.",
+          "statBonuses": {
+            "intellect": 3
+          },
+          "passive": {
+            "name": "Rolling Storm",
+            "description": "Your spells deal 8% more damage and regenerate 4% more mana.",
+            "modifiers": {
+              "attackMultiplier": 0.08,
+              "manaRegenPercent": 0.04
+            }
+          }
+        },
+        {
           "id": "arcanist_eye_of_the_tempest",
           "name": "Eye of the Tempest",
           "type": "passive",
@@ -698,6 +888,32 @@
             "modifiers": {
               "manaRegenPercent": 0.06,
               "abilityManaCostReductionFlat": 2
+            }
+          }
+        },
+        {
+          "id": "arcanist_storm_symphony",
+          "name": "Storm Symphony",
+          "type": "passive",
+          "tier": 3,
+          "order": 3,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "arcanist_resonant_conduit"
+          ],
+          "description": "Conduct the tempest as a single, devastating chorus.",
+          "statBonuses": {
+            "intellect": 4,
+            "mana": 16
+          },
+          "passive": {
+            "name": "Conductor's Rhythm",
+            "description": "Your spells deal 12% more damage and abilities cost 1 less mana.",
+            "modifiers": {
+              "attackMultiplier": 0.12,
+              "abilityManaCostReductionFlat": 1
             }
           }
         }
@@ -813,6 +1029,27 @@
           }
         },
         {
+          "id": "templar_vigilant_watch",
+          "name": "Vigilant Watch",
+          "type": "passive",
+          "tier": 1,
+          "order": 4,
+          "cost": 1,
+          "description": "Stand sentinel so the faithful can breathe easy.",
+          "statBonuses": {
+            "health": 6,
+            "mana": 6
+          },
+          "passive": {
+            "name": "Everbright Ward",
+            "description": "Regenerate 2% more health and mana.",
+            "modifiers": {
+              "healthRegenPercent": 0.02,
+              "manaRegenPercent": 0.02
+            }
+          }
+        },
+        {
           "id": "templar_solar_aegis",
           "name": "Solar Aegis",
           "type": "ability",
@@ -886,6 +1123,32 @@
           }
         },
         {
+          "id": "templar_dawnshield_ritual",
+          "name": "Dawnshield Ritual",
+          "type": "passive",
+          "tier": 2,
+          "order": 4,
+          "cost": 2,
+          "minLevel": 4,
+          "minSpent": 3,
+          "requires": [
+            "templar_vigilant_watch"
+          ],
+          "description": "Etch radiant sigils that harden your guard and soothe allies.",
+          "statBonuses": {
+            "health": 12,
+            "intellect": 1
+          },
+          "passive": {
+            "name": "Sunrise Bulwark",
+            "description": "Guarding reduces damage by an additional 10% and regenerate 3% more health.",
+            "modifiers": {
+              "guardDamageReductionBonus": 0.1,
+              "healthRegenPercent": 0.03
+            }
+          }
+        },
+        {
           "id": "templar_avatar_of_light",
           "name": "Avatar of Light",
           "type": "passive",
@@ -934,6 +1197,33 @@
             "modifiers": {
               "abilityManaCostReductionFlat": 2,
               "attackMultiplier": 0.1
+            }
+          }
+        },
+        {
+          "id": "templar_resplendent_icon",
+          "name": "Resplendent Icon",
+          "type": "passive",
+          "tier": 3,
+          "order": 3,
+          "cost": 3,
+          "minLevel": 7,
+          "minSpent": 7,
+          "requires": [
+            "templar_dawnshield_ritual"
+          ],
+          "description": "Shine as a beacon that rallies the devoted.",
+          "statBonuses": {
+            "health": 16,
+            "mana": 12
+          },
+          "passive": {
+            "name": "Radiant Standard",
+            "description": "Regenerate 4% more health and mana and your attacks deal 6% more damage.",
+            "modifiers": {
+              "healthRegenPercent": 0.04,
+              "manaRegenPercent": 0.04,
+              "attackMultiplier": 0.06
             }
           }
         }
