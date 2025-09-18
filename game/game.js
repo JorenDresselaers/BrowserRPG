@@ -19,50 +19,14 @@
   const PASSIVE_MANA_REGEN_RATE = 0.06;
 
   const abilityLibrary = {
-    'Shield Slam': {
+    'Arcane Surge': {
       usesPerRest: 3,
-      manaCost: 15,
-      damageMultiplier: 1.1,
-      bonusDamage: 8,
-      defenseMitigation: 0.2,
-      minimumDamage: 8,
-      description: 'A crushing blow that staggers foes with your shield.'
-    },
-    'Twin Arrows': {
-      usesPerRest: 3,
-      manaCost: 14,
-      damageMultiplier: 1.05,
-      bonusDamage: 10,
-      defenseMitigation: 0.18,
-      minimumDamage: 8,
-      description: 'Loose two swift arrows that strike vital points.'
-    },
-    'Lightning Coil': {
-      usesPerRest: 3,
-      manaCost: 18,
-      damageMultiplier: 1.2,
-      bonusDamage: 10,
-      defenseMitigation: 0.12,
-      minimumDamage: 10,
-      description: 'Unleash a spiral of chained lightning.'
-    },
-    'Sunlance': {
-      usesPerRest: 3,
-      manaCost: 16,
-      damageMultiplier: 1.15,
-      bonusDamage: 9,
+      manaCost: 22,
+      damageMultiplier: 1.3,
+      bonusDamage: 12,
       defenseMitigation: 0.15,
-      minimumDamage: 9,
-      description: 'Call down a spear of radiant flame.'
-    },
-    Shieldwall: {
-      usesPerRest: 2,
-      manaCost: 18,
-      damageMultiplier: 0.85,
-      bonusDamage: 6,
-      defenseMitigation: 0.55,
-      minimumDamage: 6,
-      description: 'Brace behind your shield to absorb most of the enemy\'s counterattack.'
+      minimumDamage: 11,
+      description: 'Overcharge your spellwork, striking with +12 bonus lightning damage while cutting through 15% of enemy defenses.'
     },
     'Arrow Storm': {
       usesPerRest: 3,
@@ -71,16 +35,88 @@
       bonusDamage: 6,
       defenseMitigation: 0.1,
       minimumDamage: 10,
-      description: 'Unleash a storm of arrows that overwhelms your foe.'
+      description: 'Blanket an area in arrows, adding +6 bonus damage and overwhelming foes even through 10% of their armor.'
     },
-    'Static Torrent': {
+    'Bestial Bond': {
       usesPerRest: 2,
-      manaCost: 24,
-      damageMultiplier: 1.4,
-      bonusDamage: 12,
-      defenseMitigation: 0.05,
-      minimumDamage: 14,
-      description: 'Channel a torrent of crackling energy that devastates your enemy.'
+      manaCost: 16,
+      damageMultiplier: 1.15,
+      bonusDamage: 11,
+      defenseMitigation: 0.18,
+      minimumDamage: 9,
+      description: 'Fight alongside your companion for +11 bonus damage while your combined assault ignores 18% of the target\'s defenses.'
+    },
+    'Bulwark': {
+      usesPerRest: 2,
+      manaCost: 14,
+      damageMultiplier: 0.95,
+      bonusDamage: 9,
+      defenseMitigation: 0.25,
+      minimumDamage: 8,
+      description: 'Set your shield and counter with +9 bonus damage, shrugging off 25% of incoming defense as you hold the line.'
+    },
+    'Camouflaged Step': {
+      usesPerRest: 3,
+      manaCost: 12,
+      damageMultiplier: 1.05,
+      bonusDamage: 7,
+      defenseMitigation: 0.22,
+      minimumDamage: 7,
+      description: 'Slip from cover to deliver +7 bonus damage, striking from the shadows while bypassing 22% of a foe\'s guard.'
+    },
+    "Guardian's Roar": {
+      usesPerRest: 2,
+      manaCost: 12,
+      damageMultiplier: 1,
+      bonusDamage: 7,
+      defenseMitigation: 0.12,
+      minimumDamage: 7,
+      description: 'Unleash a rallying shout that deals steady damage (+7) and rattles foes enough to pierce 12% of their armor.'
+    },
+    'Lightning Coil': {
+      usesPerRest: 3,
+      manaCost: 18,
+      damageMultiplier: 1.2,
+      bonusDamage: 10,
+      defenseMitigation: 0.12,
+      minimumDamage: 10,
+      description: 'Channel chained lightning for +10 bonus damage, ignoring 12% of the target\'s protection as the bolts arc.'
+    },
+    'Radiant Ward': {
+      usesPerRest: 2,
+      manaCost: 15,
+      damageMultiplier: 0.95,
+      bonusDamage: 8,
+      defenseMitigation: 0.28,
+      minimumDamage: 8,
+      description: 'Erect a flare of light that deals +8 bonus damage while repelling 28% of an enemy\'s armor with consecrated force.'
+    },
+    'Revitalizing Hymn': {
+      usesPerRest: 2,
+      manaCost: 18,
+      damageMultiplier: 1.05,
+      bonusDamage: 9,
+      defenseMitigation: 0.2,
+      minimumDamage: 9,
+      description: 'Sing a battle hymn for +9 bonus radiant damage, cutting through 20% of enemy defenses as faith steels your allies.'
+    },
+    'Shield Slam': {
+      usesPerRest: 3,
+      manaCost: 15,
+      damageMultiplier: 1.1,
+      bonusDamage: 8,
+      defenseMitigation: 0.2,
+      minimumDamage: 8,
+      description: 'Drive your shield into the foe, adding +8 bonus damage and battering 20% of their defenses aside.'
+    },
+    'Shieldwall': {
+      usesPerRest: 2,
+      manaCost: 18,
+      damageMultiplier: 0.85,
+      bonusDamage: 6,
+      defenseMitigation: 0.55,
+      minimumDamage: 6,
+      description: 'Lock shields with an explosive bash that still lands +6 bonus damage while shrugging off 55% of retaliation.'
     },
     'Solar Aegis': {
       usesPerRest: 2,
@@ -89,7 +125,43 @@
       bonusDamage: 8,
       defenseMitigation: 0.28,
       minimumDamage: 9,
-      description: 'Surround yourself with radiant light, striking while hardening your defenses.'
+      description: 'Wreathe yourself in solar flame, striking for +8 bonus damage and burning through 28% of enemy armor.'
+    },
+    'Static Torrent': {
+      usesPerRest: 2,
+      manaCost: 24,
+      damageMultiplier: 1.4,
+      bonusDamage: 12,
+      defenseMitigation: 0.05,
+      minimumDamage: 14,
+      description: 'Let loose a roaring torrent of lightning for +12 bonus damage, overwhelming foes even through heavy guard.'
+    },
+    'Sunlance': {
+      usesPerRest: 3,
+      manaCost: 16,
+      damageMultiplier: 1.15,
+      bonusDamage: 9,
+      defenseMitigation: 0.15,
+      minimumDamage: 9,
+      description: 'Call down a spear of solar fire, lancing for +9 bonus damage and piercing 15% of protective wards.'
+    },
+    'Tempest Barrier': {
+      usesPerRest: 2,
+      manaCost: 16,
+      damageMultiplier: 0.9,
+      bonusDamage: 6,
+      defenseMitigation: 0.35,
+      minimumDamage: 8,
+      description: 'Summon a whirling barrier that slams for +6 bonus damage while shunting 35% of enemy defense aside.'
+    },
+    'Twin Arrows': {
+      usesPerRest: 3,
+      manaCost: 14,
+      damageMultiplier: 1.05,
+      bonusDamage: 10,
+      defenseMitigation: 0.18,
+      minimumDamage: 8,
+      description: 'Loose a pair of arrows for +10 bonus damage, threading past 18% of the target\'s armor.'
     }
   };
 
@@ -140,6 +212,7 @@
     manaValue: document.getElementById('manaValue'),
     playerStats: document.getElementById('playerStats'),
     playerAbilities: document.getElementById('playerAbilities'),
+    playerPassives: document.getElementById('playerPassives'),
     talentTree: document.getElementById('talentTree'),
     talentTreeName: document.getElementById('talentTreeName'),
     talentPoints: document.getElementById('talentPoints'),
@@ -239,6 +312,7 @@
 
   const screenRenderers = {
     character: renderCharacterScreen,
+    professions: renderProfessionScreen,
     travel: renderTravelScreen,
     trade: renderTradeScreen,
     town: renderTownScreen,
@@ -392,7 +466,23 @@
       )
       .join('');
     const abilitiesList = (classData.abilities || [])
-      .map((ability) => `<li>${ability}</li>`)
+      .map((ability) => {
+        const definition = getAbilityDefinition(ability);
+        const detailSummary = getAbilityDetailSummary(definition);
+        const detailLine = detailSummary
+          ? `<span class=\"class-ability__meta\">${detailSummary}</span>`
+          : '';
+        const description = definition?.description
+          ? `<span class=\"class-ability__description\">${definition.description}</span>`
+          : '';
+        return `
+          <li>
+            <span class=\"class-ability__name\">${ability}</span>
+            ${detailLine}
+            ${description}
+          </li>
+        `;
+      })
       .join('');
     const kitList = startingItems.length
       ? startingItems.map((item) => `<li>${item}</li>`).join('')
@@ -734,6 +824,7 @@
     syncResourceCaps(state.player);
     updatePlayerPanel();
     renderCharacterScreen();
+    renderProfessionScreen();
     renderTravelScreen();
     renderTradeScreen();
     renderTownScreen();
@@ -775,6 +866,7 @@
     updateResourceBar(elements.manaBar, elements.manaValue, player.resources.mana, maxMana);
     renderPlayerStats();
     renderPlayerAbilities();
+    renderPlayerPassives();
     renderPlayerProfessions();
     renderPlayerEquipment();
   }
@@ -795,10 +887,28 @@
         const base = Math.round(player.stats[stat] || 0);
         const total = Math.round(getTotalStat(player, stat));
         const diff = total - base;
-        const bonus = diff !== 0 ? ` (<span class=\"bonus\">${diff > 0 ? '+' : ''}${diff}</span>)` : '';
+        const bonus = diff !== 0 ? ` (<span class="bonus">${diff > 0 ? '+' : ''}${diff}</span>)` : '';
         return `<li>${toTitle(stat)}: ${total}${bonus}</li>`;
       })
       .join('');
+  }
+
+  function getAbilityDetailSummary(definition) {
+    if (!definition) return '';
+    const parts = [];
+    if (Number.isFinite(definition.damageMultiplier)) {
+      parts.push(`${Math.round(definition.damageMultiplier * 100)}% weapon power`);
+    }
+    if (Number.isFinite(definition.bonusDamage) && definition.bonusDamage !== 0) {
+      parts.push(`+${Math.round(definition.bonusDamage)} bonus damage`);
+    }
+    if (Number.isFinite(definition.defenseMitigation) && definition.defenseMitigation > 0) {
+      parts.push(`Ignores ${Math.round(definition.defenseMitigation * 100)}% defense`);
+    }
+    if (Number.isFinite(definition.minimumDamage) && definition.minimumDamage > 0) {
+      parts.push(`Minimum ${Math.round(definition.minimumDamage)} damage`);
+    }
+    return parts.join(' • ');
   }
 
   function renderPlayerAbilities() {
@@ -825,6 +935,10 @@
           : 'At-will';
         const manaCost = getAbilityManaCostForPlayer(player, definition);
         const manaLabel = Number.isFinite(manaCost) ? `${manaCost} mana` : 'mana cost varies';
+        const detailSummary = getAbilityDetailSummary(definition);
+        const detailLine = detailSummary
+          ? `<span class="ability-entry__details">${detailSummary}</span>`
+          : '';
         const description = definition?.description
           ? `<span class="ability-entry__description">${definition.description}</span>`
           : '';
@@ -837,6 +951,7 @@
             <button type="button" class="ability-entry${activeClass}" data-ability-name="${abilityName}">
               <span class="ability-entry__name">${abilityName}</span>
               <span class="ability-entry__meta">${usesLabel} • ${manaLabel}</span>
+              ${detailLine}
               ${description}
               ${statusBadge}
             </button>
@@ -845,6 +960,42 @@
       })
       .join('');
     elements.playerAbilities.innerHTML = items;
+  }
+
+  function renderPlayerPassives() {
+    if (!elements.playerPassives) return;
+    const player = state.player;
+    if (!player) {
+      elements.playerPassives.innerHTML = '<li class="empty">Unlock talents to gain passive effects.</li>';
+      return;
+    }
+    const passives = getPlayerTalentNodes(player)
+      .filter((node) => node?.passive?.name)
+      .sort((a, b) => {
+        const tierDiff = (a?.tier ?? 99) - (b?.tier ?? 99);
+        if (tierDiff !== 0) return tierDiff;
+        const orderDiff = (a?.order ?? 0) - (b?.order ?? 0);
+        if (orderDiff !== 0) return orderDiff;
+        return (a?.name || '').localeCompare(b?.name || '');
+      });
+    if (!passives.length) {
+      elements.playerPassives.innerHTML = '<li class="empty">Unlock talents to gain passive effects.</li>';
+      return;
+    }
+    elements.playerPassives.innerHTML = passives
+      .map((node) => {
+        const tierLabel = Number.isFinite(node?.tier) ? `Tier ${node.tier}` : 'Talent';
+        const meta = `${tierLabel} • ${node?.name || 'Unknown Source'}`;
+        const description = node.passive.description || 'No description provided yet.';
+        return `
+          <li class="passive-entry">
+            <span class="passive-entry__meta">${meta}</span>
+            <span class="passive-entry__name">${node.passive.name}</span>
+            <span class="passive-entry__description">${description}</span>
+          </li>
+        `;
+      })
+      .join('');
   }
 
   function renderTalentPanel() {
@@ -1066,7 +1217,12 @@
   }
 
   function renderPlayerProfessions() {
-    const professions = state.player.professions || [];
+    const player = state.player;
+    if (!player) {
+      elements.playerProfessions.innerHTML = '<li>No professions trained.</li>';
+      return;
+    }
+    const professions = player.professions || [];
     elements.playerProfessions.innerHTML = professions
       .map((id) => {
         const profession = getProfession(id);
@@ -1095,6 +1251,10 @@
 
   function renderCharacterScreen() {
     renderTalentPanel();
+  }
+
+  function renderProfessionScreen() {
+    renderPlayerProfessions();
     renderProfessionPanel();
   }
 
@@ -1737,10 +1897,12 @@
     if (!player) return 1;
     const totalSpeed = getTotalStat(player, 'speed');
     if (totalSpeed > 0) {
-      return totalSpeed;
+      const scaled = Math.round(totalSpeed * (1.15 + totalSpeed * 0.04));
+      return Math.max(totalSpeed, scaled);
     }
     const agility = getTotalStat(player, 'agility');
-    return Math.max(5, Math.round(agility * 1.2 + 10));
+    const fallback = Math.max(5, Math.round(agility * 1.2 + 10));
+    return Math.max(agility, fallback);
   }
 
   function getEnemySpeed(enemy) {
