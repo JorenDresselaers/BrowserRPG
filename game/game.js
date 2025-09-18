@@ -136,6 +136,7 @@
     townFeedback: document.getElementById('townFeedback'),
     talkToNpcButton: document.getElementById('talkToNpcButton'),
     requestQuestButton: document.getElementById('requestQuestButton'),
+    roamTownButton: document.getElementById('roamTownButton'),
     tradingCurrentZone: document.getElementById('tradingCurrentZone'),
     merchantSelect: document.getElementById('merchantSelect'),
     merchantInfo: document.getElementById('merchantInfo'),
@@ -173,7 +174,7 @@
     travel: 'Plan your journeys and respond to what unfolds on the road.',
     profession: 'Work your trade to gather resources or craft items.',
     trade: 'Choose goods to buy or sell with the merchants.',
-    town: 'Speak with residents to hear rumours or request help.'
+    town: 'Speak with residents, patrol the streets, or request help.'
   };
 
   const equipmentSlotMap = {
@@ -556,6 +557,7 @@
     });
     elements.talkToNpcButton?.addEventListener('click', talkToNpc);
     elements.requestQuestButton?.addEventListener('click', requestQuestFromNpc);
+    elements.roamTownButton?.addEventListener('click', roamTown);
   }
 
   function setupTradingControls() {
@@ -1781,6 +1783,9 @@
     if (elements.townCurrentZone) {
       elements.townCurrentZone.textContent = zone?.name || 'Unknown';
     }
+    if (elements.roamTownButton) {
+      elements.roamTownButton.disabled = !zone;
+    }
     const npcs = (zone?.npcIds || [])
       .map((npcId) => getNpc(npcId))
       .filter(Boolean);
@@ -1859,6 +1864,84 @@
     const questMessage = `${npc.name} entrusts you with the quest "${getQuest(availableQuest).name}".`;
     addLog(questMessage, logTypes.SUCCESS);
     setFeedback('town', questMessage, logTypes.SUCCESS);
+  }
+
+  function roamTown() {
+    if (!state.player) return;
+    if (!ensureCanAct('roam the settlement', { feedbackChannel: 'town' })) {
+      return;
+    }
+    const zone = getCurrentZone();
+    if (!zone) {
+      const info = 'There is no settlement to roam right now.';
+      addLog(info, logTypes.INFO);
+      setFeedback('town', info, logTypes.INFO);
+      return;
+    }
+    const enemyPool = (zone.enemyIds || []).filter((enemyId) => Boolean(getEnemy(enemyId)));
+    const gatherPool = (zone.gatherables || []).filter((itemId) => Boolean(getItem(itemId)));
+    const quietSpots = (zone.pointsOfInterest || []).filter(Boolean);
+    const outcomes = [
+      { type: 'quiet', weight: 0.25, data: quietSpots.length ? quietSpots : [zone.name] }
+    ];
+    if (enemyPool.length) {
+      outcomes.push({ type: 'encounter', weight: 0.45, data: enemyPool });
+    }
+    if (gatherPool.length) {
+      outcomes.push({ type: 'gather', weight: 0.35, data: gatherPool });
+    }
+    const totalWeight = outcomes.reduce((sum, entry) => sum + entry.weight, 0);
+    if (totalWeight <= 0) {
+      const calmMessage = `You wander ${zone.name}, but the streets are quiet.`;
+      addLog(calmMessage, logTypes.INFO);
+      setFeedback('town', calmMessage, logTypes.INFO);
+      advanceTime(1);
+      return;
+    }
+    let roll = Math.random() * totalWeight;
+    let chosen = outcomes[0];
+    for (const entry of outcomes) {
+      roll -= entry.weight;
+      if (roll <= 0) {
+        chosen = entry;
+        break;
+      }
+    }
+    if (chosen.type === 'encounter') {
+      const enemyId = sample(chosen.data);
+      const enemy = getEnemy(enemyId);
+      if (!enemy) {
+        const warning = 'You sense danger in the air, but nothing emerges from the shadows.';
+        addLog(warning, logTypes.INFO);
+        setFeedback('town', warning, logTypes.INFO);
+        advanceTime(1);
+        return;
+      }
+      const message = `While roaming ${zone.name}, you clash with ${enemy.name}!`;
+      addLog(message, logTypes.WARNING);
+      setFeedback('town', message, logTypes.WARNING);
+      advanceTime(1, { skipRegen: true });
+      enterCombat(enemyId, { zoneId: zone.id, activity: 'townRoam' });
+      return;
+    }
+    if (chosen.type === 'gather') {
+      const itemId = sample(chosen.data);
+      const amount = Math.random() < 0.3 ? 2 : 1;
+      grantItem(state.player, itemId, amount);
+      const itemName = getItem(itemId)?.name || itemId;
+      const message = `You collect ${amount} ${itemName} while roaming ${zone.name}.`;
+      addLog(message, logTypes.SUCCESS);
+      setFeedback('town', message, logTypes.SUCCESS);
+      renderInventory();
+      updateQuestProgress('collect', itemId, amount);
+      advanceTime(1);
+      return;
+    }
+    const landmark = sample(chosen.data) || zone.name;
+    const calmLog = `You patrol near ${landmark}, but the streets remain calm.`;
+    addLog(calmLog, logTypes.INFO);
+    setFeedback('town', calmLog, logTypes.INFO);
+    advanceTime(1);
   }
 
   function hasQuest(questId) {
