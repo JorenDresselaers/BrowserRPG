@@ -4,6 +4,7 @@
     enemies: './data/enemies.json',
     zones: './data/zones.json',
     dungeons: './data/dungeons.json',
+    landmarks: './data/landmarks.json',
     npcs: './data/npcs.json',
     items: './data/items.json',
     professions: './data/professions.json',
@@ -227,6 +228,7 @@
     travelDestinationSelect: document.getElementById('travelDestinationSelect'),
     travelDestinationDescription: document.getElementById('travelDestinationDescription'),
     travelDestinationMeta: document.getElementById('travelDestinationMeta'),
+    travelDestinationLandmarks: document.getElementById('travelDestinationLandmarks'),
     travelDestinationHighlights: document.getElementById('travelDestinationHighlights'),
     travelDestinationThreats: document.getElementById('travelDestinationThreats'),
     travelFocusOptions: document.getElementById('travelFocusOptions'),
@@ -237,6 +239,12 @@
     travelProgressBar: document.getElementById('travelProgressBar'),
     travelEventLog: document.getElementById('travelEventLog'),
     travelFeedback: document.getElementById('travelFeedback'),
+    currentLandmarkPanel: document.getElementById('currentLandmarkPanel'),
+    currentLandmarkTitle: document.getElementById('currentLandmarkTitle'),
+    currentLandmarkDescription: document.getElementById('currentLandmarkDescription'),
+    currentLandmarkDetails: document.getElementById('currentLandmarkDetails'),
+    currentLandmarkActions: document.getElementById('currentLandmarkActions'),
+    currentLandmarkFeedback: document.getElementById('currentLandmarkFeedback'),
     combatCurrentZone: document.getElementById('combatCurrentZone'),
     enemyDetails: document.getElementById('enemyDetails'),
     combatActions: document.getElementById('combatActions'),
@@ -357,6 +365,7 @@
     dataIndex.enemies = indexById(data.enemies);
     dataIndex.zones = indexById(data.zones);
     dataIndex.dungeons = indexById(data.dungeons);
+    dataIndex.landmarks = indexById(data.landmarks || []);
     dataIndex.npcs = indexById(data.npcs);
     dataIndex.items = indexById(data.items);
     dataIndex.professions = indexById(data.professions);
@@ -550,7 +559,7 @@
     state.player = createPlayer(name, classId);
     state.feedback = createDefaultFeedbackState();
     sanitizeSelectedAbility();
-    setTrackedState(state.travel, 'destinationZoneId', state.player.location.zoneId);
+    setTravelDestination('zone', state.player.location.zoneId, { silent: true });
     elements.newGameModal.classList.add('hidden');
     addLog(`Welcome, ${state.player.name} the ${getClass(classId).name}!`, logTypes.SUCCESS);
     updateAllUI();
@@ -582,7 +591,8 @@
         mana: classData.stats.mana
       },
       location: {
-        zoneId: data.zones[0]?.id || null
+        zoneId: data.zones[0]?.id || null,
+        landmarkId: null
       },
       timeline: {
         day: 1,
@@ -674,9 +684,12 @@
 
   function setupTravelControls() {
     elements.travelDestinationSelect?.addEventListener('change', () => {
-      const destinationId = elements.travelDestinationSelect.value;
-      setTrackedState(state.travel, 'destinationZoneId', destinationId);
-      renderTravelDestination(destinationId);
+      const value = elements.travelDestinationSelect.value;
+      const parsed = parseDestinationValue(value);
+      if (parsed) {
+        setTravelDestination(parsed.type, parsed.id);
+      }
+      renderTravelDestination();
       renderTravelJourney();
     });
     elements.travelFocusOptions?.addEventListener('click', (event) => {
@@ -687,6 +700,11 @@
     elements.beginTravelButton?.addEventListener('click', beginJourney);
     elements.travelAdvanceButton?.addEventListener('click', advanceJourneyTurn);
     elements.cancelTravelButton?.addEventListener('click', cancelJourney);
+    elements.currentLandmarkActions?.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-landmark-action]');
+      if (!button) return;
+      handleLandmarkAction(button.dataset.landmarkAction);
+    });
   }
 
   function setupCombatControls() {
@@ -1264,26 +1282,26 @@
 
   function renderTravelScreen() {
     populateTravelDestinations();
-    const currentZone = getCurrentZone();
+    const currentLocation = getCurrentLocation();
     if (elements.travelCurrentZone) {
-      elements.travelCurrentZone.textContent = currentZone?.name || 'Uncharted Wilds';
+      elements.travelCurrentZone.textContent = getLocationName(currentLocation) || 'Uncharted Wilds';
     }
-    if (!state.travel.destinationZoneId || !getZone(state.travel.destinationZoneId)) {
-      setTrackedState(state.travel, 'destinationZoneId', currentZone?.id || data.zones[0]?.id || null);
+    const ensuredDestination = ensureTravelDestination(currentLocation);
+    if (elements.travelDestinationSelect && ensuredDestination) {
+      elements.travelDestinationSelect.value = buildDestinationValue(ensuredDestination.type, ensuredDestination.id);
     }
-    if (elements.travelDestinationSelect && state.travel.destinationZoneId) {
-      elements.travelDestinationSelect.value = state.travel.destinationZoneId;
-    }
-    renderTravelDestination(state.travel.destinationZoneId);
+    renderTravelDestination();
     updateTravelFocusButtons();
     renderTravelJourney();
     renderTravelEventLog();
+    renderCurrentLandmarkPanel();
     renderFeedback('travel');
     if (elements.beginTravelButton) {
       elements.beginTravelButton.disabled = state.combat.active || Boolean(state.travel.journey);
     }
     if (elements.travelAdvanceButton) {
-      elements.travelAdvanceButton.disabled = state.combat.active || !state.travel.journey || state.travel.journey.pausedForCombat;
+      elements.travelAdvanceButton.disabled =
+        state.combat.active || !state.travel.journey || state.travel.journey.pausedForCombat;
     }
     if (elements.cancelTravelButton) {
       elements.cancelTravelButton.disabled = !state.travel.journey;
@@ -1292,41 +1310,103 @@
 
   function populateTravelDestinations() {
     if (!elements.travelDestinationSelect || !Array.isArray(data.zones)) return;
-    if (elements.travelDestinationSelect.childElementCount === data.zones.length) return;
-    const options = data.zones
-      .map((zone) => `<option value="${zone.id}">${zone.name}</option>`)
+    const currentLocation = getCurrentLocation();
+    const sections = [];
+    const zoneOptions = data.zones
+      .map((zone) => `<option value="${buildDestinationValue('zone', zone.id)}">${zone.name}</option>`)
       .join('');
-    elements.travelDestinationSelect.innerHTML = options;
+    sections.push(`<optgroup label="Settlements">${zoneOptions}</optgroup>`);
+    const accessibleLandmarks = getLandmarksAccessibleFrom(currentLocation);
+    if (accessibleLandmarks.length) {
+      const landmarkOptions = accessibleLandmarks
+        .map(
+          (landmark) =>
+            `<option value="${buildDestinationValue('landmark', landmark.id)}">Landmark: ${landmark.name}</option>`
+        )
+        .join('');
+      sections.push(`<optgroup label="Landmarks">${landmarkOptions}</optgroup>`);
+    }
+    elements.travelDestinationSelect.innerHTML = sections.join('');
   }
 
-  function renderTravelDestination(zoneId) {
+  function renderTravelDestination() {
     if (!elements.travelDestinationDescription) return;
-    const destination = getZone(zoneId);
+    const currentLocation = getCurrentLocation();
+    const destination = ensureTravelDestination(currentLocation);
     if (!destination) {
       elements.travelDestinationDescription.textContent = 'Select a destination to review travel notes.';
       elements.travelDestinationMeta.innerHTML = '';
       elements.travelDestinationHighlights.innerHTML = '';
       elements.travelDestinationThreats.innerHTML = '';
+      if (elements.travelDestinationLandmarks) {
+        elements.travelDestinationLandmarks.innerHTML = '<li>No mapped landmarks along this path.</li>';
+      }
+      return;
+    }
+    const location = getLocationByType(destination.type, destination.id);
+    if (!location) {
+      elements.travelDestinationDescription.textContent = 'Select a destination to review travel notes.';
+      elements.travelDestinationMeta.innerHTML = '';
+      elements.travelDestinationHighlights.innerHTML = '';
+      elements.travelDestinationThreats.innerHTML = '';
+      if (elements.travelDestinationLandmarks) {
+        elements.travelDestinationLandmarks.innerHTML = '<li>No mapped landmarks along this path.</li>';
+      }
       return;
     }
     if (elements.travelDestinationSelect) {
-      elements.travelDestinationSelect.value = destination.id;
+      elements.travelDestinationSelect.value = buildDestinationValue(location.type, location.id);
     }
-    elements.travelDestinationDescription.textContent = destination.description;
-    const [minLevel, maxLevel] = destination.levelRange || ['?', '?'];
-    elements.travelDestinationMeta.innerHTML = `
-      <li>Climate: ${destination.climate || 'Unknown'}</li>
-      <li>Level Range: ${minLevel} - ${maxLevel}</li>
-    `;
-    elements.travelDestinationHighlights.innerHTML = (destination.pointsOfInterest || [])
-      .map((poi) => `<li>${poi}</li>`)
-      .join('') || '<li>No notable landmarks recorded.</li>';
-    const enemyList = (destination.enemyIds || [])
-      .map((enemyId) => getEnemy(enemyId)?.name || enemyId)
-      .join('</li><li>');
-    elements.travelDestinationThreats.innerHTML = enemyList
-      ? `<li>${enemyList}</li>`
-      : '<li>No known threats.</li>';
+    if (location.type === 'zone') {
+      const zone = location.data;
+      elements.travelDestinationDescription.textContent = zone?.description || 'Uncharted territory awaits.';
+      const [minLevel, maxLevel] = zone?.levelRange || ['?', '?'];
+      elements.travelDestinationMeta.innerHTML = `
+        <li>Climate: ${zone?.climate || 'Unknown'}</li>
+        <li>Level Range: ${minLevel} - ${maxLevel}</li>
+      `;
+      elements.travelDestinationHighlights.innerHTML = (zone?.pointsOfInterest || [])
+        .map((poi) => `<li>${poi}</li>`)
+        .join('') || '<li>No notable landmarks recorded.</li>';
+      const enemyList = (zone?.enemyIds || [])
+        .map((enemyId) => getEnemy(enemyId)?.name || enemyId)
+        .join('</li><li>');
+      elements.travelDestinationThreats.innerHTML = enemyList
+        ? `<li>${enemyList}</li>`
+        : '<li>No known threats.</li>';
+    } else {
+      const landmark = location.data;
+      elements.travelDestinationDescription.textContent = landmark?.description || 'An unmarked landmark awaits.';
+      const connections = (landmark?.connectedZoneIds || [])
+        .map((zoneId) => getZone(zoneId)?.name || toTitle(zoneId))
+        .join(', ') || 'Unknown';
+      elements.travelDestinationMeta.innerHTML = `
+        <li>Category: ${toTitle(landmark?.category || 'landmark')}</li>
+        <li>Connected Settlements: ${connections}</li>
+      `;
+      elements.travelDestinationHighlights.innerHTML = (landmark?.pointsOfInterest || [])
+        .map((poi) => `<li>${poi}</li>`)
+        .join('') || '<li>No notable features recorded.</li>';
+      const enemyList = (landmark?.enemyIds || [])
+        .map((enemyId) => getEnemy(enemyId)?.name || enemyId)
+        .join('</li><li>');
+      elements.travelDestinationThreats.innerHTML = enemyList
+        ? `<li>${enemyList}</li>`
+        : '<li>No major threats observed.</li>';
+    }
+    renderRouteLandmarks(currentLocation, location);
+  }
+
+  function renderRouteLandmarks(origin, destination) {
+    if (!elements.travelDestinationLandmarks) return;
+    const waypoints = getLandmarksBetween(origin, destination);
+    if (!waypoints.length) {
+      elements.travelDestinationLandmarks.innerHTML = '<li>No mapped landmarks along this path.</li>';
+      return;
+    }
+    elements.travelDestinationLandmarks.innerHTML = waypoints
+      .map((landmark) => `<li>${landmark.name}</li>`)
+      .join('');
   }
 
   function renderTravelJourney() {
@@ -1340,7 +1420,7 @@
       }
       return;
     }
-    const destination = getZone(journey.destinationId);
+    const destination = getLocationByType(journey.destination?.type, journey.destination?.id);
     const totalSteps = Math.max(1, journey.totalSteps || 1);
     const progress = clamp(journey.progress / totalSteps, 0, 1) * 100;
     if (elements.travelProgressBar) {
@@ -1349,7 +1429,7 @@
     if (elements.travelStatus) {
       const focusLabel = journey.focus === 'gathering' ? 'Gathering' : journey.focus === 'combat' ? 'Seeking Battle' : 'Balanced';
       const statusLines = [
-        `Journey to ${destination?.name || 'an unknown destination'} — ${journey.progress}/${totalSteps} turns completed.`,
+        `Journey to ${getLocationName(destination) || 'an unknown destination'} — ${journey.progress}/${totalSteps} turns completed.`,
         `Current focus: ${focusLabel}.`
       ];
       if (journey.pausedForCombat) {
@@ -1395,6 +1475,415 @@
     });
   }
 
+  function getTravelDestination() {
+    if (!state.travel.destination || typeof state.travel.destination !== 'object') {
+      state.travel.destination = { type: 'zone', id: null };
+    }
+    if (!['zone', 'landmark'].includes(state.travel.destination.type)) {
+      state.travel.destination.type = 'zone';
+    }
+    return state.travel.destination;
+  }
+
+  function setTravelDestination(type, id, options = {}) {
+    const destination = getTravelDestination();
+    const nextType = type && ['zone', 'landmark'].includes(type) ? type : 'zone';
+    const nextId = id || null;
+    if (destination.type === nextType && destination.id === nextId) {
+      return false;
+    }
+    state.travel.destination = { type: nextType, id: nextId };
+    if (!options.silent) {
+      scheduleSave();
+    }
+    return true;
+  }
+
+  function ensureTravelDestination(currentLocation) {
+    const destination = getTravelDestination();
+    const resolved = getLocationByType(destination.type, destination.id);
+    if (resolved) {
+      return resolved;
+    }
+    let fallbackZoneId = state.player?.location?.zoneId || data.zones[0]?.id || null;
+    if (currentLocation?.type === 'zone') {
+      fallbackZoneId = currentLocation.id;
+    } else if (currentLocation?.type === 'landmark') {
+      fallbackZoneId = (currentLocation.data?.connectedZoneIds || []).find((zoneId) => getZone(zoneId)) || fallbackZoneId;
+    }
+    if (fallbackZoneId) {
+      setTravelDestination('zone', fallbackZoneId, { silent: true });
+      return getLocationByType('zone', fallbackZoneId);
+    }
+    return null;
+  }
+
+  function buildDestinationValue(type, id) {
+    if (!type || !id) return '';
+    return `${type}:${id}`;
+  }
+
+  function parseDestinationValue(value) {
+    if (typeof value !== 'string') return null;
+    const [type, ...rest] = value.split(':');
+    const id = rest.join(':');
+    if (!type || !id) return null;
+    if (!['zone', 'landmark'].includes(type)) return null;
+    return { type, id };
+  }
+
+  function getLocationByType(type, id) {
+    if (!type || !id) return null;
+    if (type === 'zone') {
+      const zone = getZone(id);
+      return zone ? { type: 'zone', id: zone.id, data: zone } : null;
+    }
+    if (type === 'landmark') {
+      const landmark = getLandmark(id);
+      return landmark ? { type: 'landmark', id: landmark.id, data: landmark } : null;
+    }
+    return null;
+  }
+
+  function getCurrentLocation() {
+    if (!state.player || !state.player.location) return null;
+    const landmarkId = state.player.location.landmarkId;
+    if (landmarkId) {
+      const landmark = getLandmark(landmarkId);
+      if (landmark) {
+        return { type: 'landmark', id: landmark.id, data: landmark };
+      }
+    }
+    const zoneId = state.player.location.zoneId || data.zones[0]?.id || null;
+    const zone = zoneId ? getZone(zoneId) : null;
+    return zone ? { type: 'zone', id: zone.id, data: zone } : null;
+  }
+
+  function isSameLocation(a, b) {
+    if (!a || !b) return false;
+    return a.type === b.type && a.id === b.id;
+  }
+
+  function getLocationName(location) {
+    if (!location) return null;
+    if (location.type === 'landmark') {
+      return `${location.data?.name || toTitle(location.id)} (Landmark)`;
+    }
+    return location.data?.name || toTitle(location.id);
+  }
+
+  function getConnectedZoneIdsForLocation(location) {
+    if (!location) return [];
+    if (location.type === 'zone') {
+      return [location.id].filter(Boolean);
+    }
+    if (location.type === 'landmark') {
+      return (location.data?.connectedZoneIds || []).filter(Boolean);
+    }
+    return [];
+  }
+
+  function getLandmarksAccessibleFrom(location) {
+    if (!Array.isArray(data.landmarks) || !data.landmarks.length) return [];
+    if (!location) return [];
+    const connected = new Set(getConnectedZoneIdsForLocation(location));
+    if (!connected.size) return [];
+    return data.landmarks.filter((landmark) =>
+      (landmark.connectedZoneIds || []).some((zoneId) => connected.has(zoneId))
+    );
+  }
+
+  function getLandmarksBetween(origin, destination) {
+    if (!Array.isArray(data.landmarks) || !data.landmarks.length) return [];
+    if (!origin || !destination) return [];
+    const originZones = new Set(getConnectedZoneIdsForLocation(origin));
+    const destinationZones = new Set(getConnectedZoneIdsForLocation(destination));
+    if (!originZones.size || !destinationZones.size) return [];
+    return data.landmarks.filter((landmark) => {
+      if ((origin.type === 'landmark' && landmark.id === origin.id) || (destination.type === 'landmark' && landmark.id === destination.id)) {
+        return false;
+      }
+      const connections = landmark.connectedZoneIds || [];
+      const touchesOrigin = connections.some((zoneId) => originZones.has(zoneId));
+      const touchesDestination = connections.some((zoneId) => destinationZones.has(zoneId));
+      return touchesOrigin && touchesDestination;
+    });
+  }
+
+  function uniqueArray(values) {
+    return Array.from(new Set((values || []).filter(Boolean)));
+  }
+
+  function getLocationTravelProfile(location) {
+    if (!location) {
+      return { enemyIds: [], gatherables: [], npcIds: [], pointsOfInterest: [] };
+    }
+    if (location.type === 'zone') {
+      const zone = location.data || getZone(location.id);
+      return {
+        enemyIds: zone?.enemyIds || [],
+        gatherables: zone?.gatherables || [],
+        npcIds: zone?.npcIds || [],
+        pointsOfInterest: zone?.pointsOfInterest || []
+      };
+    }
+    if (location.type === 'landmark') {
+      const landmark = location.data || getLandmark(location.id);
+      const connectedZones = (landmark?.connectedZoneIds || [])
+        .map((zoneId) => getZone(zoneId))
+        .filter(Boolean);
+      return {
+        enemyIds: uniqueArray([
+          ...(landmark?.enemyIds || []),
+          ...connectedZones.flatMap((zone) => zone.enemyIds || [])
+        ]),
+        gatherables: uniqueArray([
+          ...(landmark?.gatherables || []),
+          ...connectedZones.flatMap((zone) => zone.gatherables || [])
+        ]),
+        npcIds: uniqueArray([
+          ...(landmark?.npcIds || []),
+          ...connectedZones.flatMap((zone) => zone.npcIds || [])
+        ]),
+        pointsOfInterest: uniqueArray([
+          ...(landmark?.pointsOfInterest || []),
+          ...connectedZones.flatMap((zone) => zone.pointsOfInterest || [])
+        ])
+      };
+    }
+    return { enemyIds: [], gatherables: [], npcIds: [], pointsOfInterest: [] };
+  }
+
+  function resolveLogType(value, fallback = logTypes.INFO) {
+    if (!value) return fallback;
+    const key = String(value).toUpperCase();
+    return logTypes[key] || fallback;
+  }
+
+  function setLandmarkFeedback(message, type = logTypes.INFO) {
+    if (!message) {
+      state.travel.landmarkFeedback = null;
+    } else {
+      state.travel.landmarkFeedback = { message, type };
+    }
+    renderCurrentLandmarkPanel();
+    scheduleSave();
+  }
+
+  function clearLandmarkFeedback() {
+    state.travel.landmarkFeedback = null;
+    renderCurrentLandmarkPanel();
+  }
+
+  function renderCurrentLandmarkPanel() {
+    if (!elements.currentLandmarkPanel) return;
+    const location = getCurrentLocation();
+    if (!location || location.type !== 'landmark') {
+      elements.currentLandmarkPanel.classList.add('hidden');
+      if (elements.currentLandmarkActions) {
+        elements.currentLandmarkActions.innerHTML = '';
+      }
+      if (elements.currentLandmarkDetails) {
+        elements.currentLandmarkDetails.innerHTML = '';
+      }
+      if (elements.currentLandmarkFeedback) {
+        elements.currentLandmarkFeedback.className = 'screen-feedback';
+        elements.currentLandmarkFeedback.textContent = '';
+      }
+      return;
+    }
+    const landmark = location.data;
+    elements.currentLandmarkPanel.classList.remove('hidden');
+    if (elements.currentLandmarkTitle) {
+      elements.currentLandmarkTitle.textContent = landmark.name;
+    }
+    if (elements.currentLandmarkDescription) {
+      elements.currentLandmarkDescription.textContent = landmark.description;
+    }
+    if (elements.currentLandmarkDetails) {
+      const connections = (landmark.connectedZoneIds || [])
+        .map((zoneId) => getZone(zoneId)?.name || toTitle(zoneId))
+        .join(', ') || 'Unknown';
+      const gatherables = landmark.gatherables?.length
+        ? landmark.gatherables.map((itemId) => getItem(itemId)?.name || toTitle(itemId)).join(', ')
+        : 'None';
+      elements.currentLandmarkDetails.innerHTML = [
+        `Category: ${toTitle(landmark.category || 'landmark')}`,
+        `Connected Settlements: ${connections}`,
+        `Notable Resources: ${gatherables}`
+      ]
+        .map((line) => `<li>${line}</li>`)
+        .join('');
+    }
+    if (elements.currentLandmarkActions) {
+      const actions = landmark.actions || [];
+      if (!actions.length) {
+        elements.currentLandmarkActions.innerHTML = '<p class="action-description">No notable activities are currently available.</p>';
+      } else {
+        elements.currentLandmarkActions.innerHTML = actions
+          .map((action) => {
+            const description = action.description
+              ? `<p class="action-description">${action.description}</p>`
+              : '';
+            return `<div class="landmark-action"><button type="button" data-landmark-action="${action.id}">${action.label}</button>${description}</div>`;
+          })
+          .join('');
+      }
+    }
+    if (elements.currentLandmarkFeedback) {
+      elements.currentLandmarkFeedback.className = 'screen-feedback';
+      const feedback = state.travel.landmarkFeedback;
+      if (feedback?.message) {
+        elements.currentLandmarkFeedback.textContent = feedback.message;
+        elements.currentLandmarkFeedback.classList.add('active');
+        if (feedback.type) {
+          elements.currentLandmarkFeedback.classList.add(feedback.type);
+        }
+      } else {
+        elements.currentLandmarkFeedback.textContent = 'Interact with the landmark to uncover its secrets.';
+      }
+    }
+  }
+
+  function handleLandmarkAction(actionId) {
+    if (!state.player) return;
+    const location = getCurrentLocation();
+    if (!location || location.type !== 'landmark') return;
+    const landmark = location.data;
+    const action = (landmark.actions || []).find((entry) => entry.id === actionId);
+    if (!action) {
+      setLandmarkFeedback('That opportunity is no longer available.', logTypes.WARNING);
+      return;
+    }
+    if (isInCombat()) {
+      setLandmarkFeedback('You cannot interact with the landmark during combat.', logTypes.WARNING);
+      return;
+    }
+    resolveLandmarkAction(landmark, action);
+  }
+
+  function resolveLandmarkAction(landmark, action) {
+    if (!action) return;
+    if (action.type === 'encounter') {
+      const enemy = getEnemy(action.enemyId);
+      if (!enemy) {
+        setLandmarkFeedback('No foe answers your challenge.', logTypes.INFO);
+        return;
+      }
+      const message = action.log || `A ${enemy.name} emerges to bar your path!`;
+      const type = resolveLogType(action.logType, logTypes.DANGER);
+      addTravelEvent(message, type);
+      addLog(message, type);
+      setLandmarkFeedback(message, type);
+      enterCombat(enemy.id, { type: 'travel' });
+      return;
+    }
+    if (action.type === 'reward') {
+      const result = applyLandmarkRewards(action.rewards);
+      const message = action.log || 'You secure valuable spoils from the landmark.';
+      const type = resolveLogType(action.logType, logTypes.SUCCESS);
+      addTravelEvent(message, type);
+      addLog(message, type);
+      const summary = result.summary ? `${message} ${result.summary}` : message;
+      setLandmarkFeedback(summary, type);
+      advanceTime(1);
+      return;
+    }
+    if (action.type === 'check') {
+      const successChance = clamp(action.successChance ?? 0.5, 0, 1);
+      const roll = Math.random();
+      const outcome = roll <= successChance ? action.success : action.failure;
+      const type = resolveLogType(outcome?.logType, roll <= successChance ? logTypes.SUCCESS : logTypes.WARNING);
+      const message = outcome?.message || (roll <= successChance ? 'You succeed.' : 'You fail to make progress.');
+      if (roll <= successChance && outcome?.rewards) {
+        const result = applyLandmarkRewards(outcome.rewards);
+        const summary = result.summary ? `${message} ${result.summary}` : message;
+        addTravelEvent(message, type);
+        addLog(message, type);
+        setLandmarkFeedback(summary, type);
+      } else {
+        addTravelEvent(message, type);
+        addLog(message, type);
+        setLandmarkFeedback(message, type);
+      }
+      advanceTime(1);
+      return;
+    }
+    if (action.type === 'narrative') {
+      const message = action.log || 'You take a quiet moment to contemplate the surroundings.';
+      const type = resolveLogType(action.logType, logTypes.INFO);
+      addTravelEvent(message, type);
+      addLog(message, type);
+      setLandmarkFeedback(message, type);
+      advanceTime(1);
+      return;
+    }
+    setLandmarkFeedback('Nothing noteworthy happens.', logTypes.INFO);
+  }
+
+  function applyLandmarkRewards(rewards) {
+    const summaryParts = [];
+    if (!state.player || !rewards) {
+      return { summary: '' };
+    }
+    if (rewards.xp) {
+      state.player.xp += rewards.xp;
+      summaryParts.push(`${rewards.xp} XP`);
+    }
+    if (rewards.gold) {
+      state.player.gold += rewards.gold;
+      summaryParts.push(`${rewards.gold} gold`);
+    }
+    const itemSummaries = [];
+    (rewards.items || []).forEach((entry) => {
+      if (!entry || !entry.itemId) return;
+      const quantity = entry.amount ?? entry.quantity ?? 1;
+      grantItem(state.player, entry.itemId, quantity);
+      const itemName = getItem(entry.itemId)?.name || toTitle(entry.itemId);
+      itemSummaries.push(`${itemName} x${quantity}`);
+    });
+    if (itemSummaries.length) {
+      summaryParts.push(itemSummaries.join(', '));
+    }
+    if (rewards.recover) {
+      const recoverParts = [];
+      if (rewards.recover.healthPercent) {
+        const maxHealth = getTotalStat(state.player, 'health');
+        const restored = Math.max(1, Math.round(maxHealth * rewards.recover.healthPercent));
+        state.player.resources.health = clamp(state.player.resources.health + restored, 0, maxHealth);
+        recoverParts.push(`+${restored} Health`);
+      }
+      if (rewards.recover.manaPercent) {
+        const maxMana = getTotalStat(state.player, 'mana');
+        const restoredMana = Math.max(1, Math.round(maxMana * rewards.recover.manaPercent));
+        state.player.resources.mana = clamp(state.player.resources.mana + restoredMana, 0, maxMana);
+        recoverParts.push(`+${restoredMana} Mana`);
+      }
+      if (recoverParts.length) {
+        summaryParts.push(recoverParts.join(', '));
+      }
+    }
+    checkLevelUp();
+    updatePlayerPanel();
+    renderInventory();
+    scheduleSave();
+    return { summary: summaryParts.length ? `(${summaryParts.join(', ')})` : '' };
+  }
+
+  function movePlayerToLocation(location) {
+    if (!state.player || !location) return;
+    if (location.type === 'landmark') {
+      state.player.location.landmarkId = location.id;
+      const fallbackZone = (location.data?.connectedZoneIds || []).find((zoneId) => getZone(zoneId));
+      if (fallbackZone) {
+        state.player.location.zoneId = fallbackZone;
+      }
+    } else {
+      state.player.location.zoneId = location.id;
+      state.player.location.landmarkId = null;
+    }
+  }
+
   function beginJourney() {
     if (!state.player) return;
     if (!ensureCanAct('begin a journey', { feedbackChannel: 'travel' })) return;
@@ -1404,16 +1893,17 @@
       setFeedback('travel', warning, logTypes.WARNING);
       return;
     }
-    const destinationId = elements.travelDestinationSelect?.value || state.travel.destinationZoneId;
-    const destination = getZone(destinationId);
-    if (!destination) {
+    const selectedValue = elements.travelDestinationSelect?.value || buildDestinationValue(...Object.values(getTravelDestination()));
+    const parsed = parseDestinationValue(selectedValue);
+    const desired = parsed ? getLocationByType(parsed.type, parsed.id) : ensureTravelDestination(getCurrentLocation());
+    if (!desired) {
       const warning = 'Select a valid destination before travelling.';
       addLog(warning, logTypes.WARNING);
       setFeedback('travel', warning, logTypes.WARNING);
       return;
     }
-    const currentZone = getCurrentZone();
-    if (currentZone?.id === destination.id) {
+    const currentLocation = getCurrentLocation();
+    if (currentLocation && isSameLocation(currentLocation, desired)) {
       const info = 'You already reside in that locale.';
       addLog(info, logTypes.INFO);
       setFeedback('travel', info, logTypes.INFO);
@@ -1421,8 +1911,10 @@
     }
     const totalSteps = Math.max(2, 3 + Math.floor(Math.random() * 4));
     state.travel.journey = {
-      originId: currentZone?.id || destination.id,
-      destinationId: destination.id,
+      origin: currentLocation
+        ? { type: currentLocation.type, id: currentLocation.id }
+        : { type: desired.type, id: desired.id },
+      destination: { type: desired.type, id: desired.id },
       totalSteps,
       progress: 0,
       focus: state.travel.focus,
@@ -1430,8 +1922,11 @@
       pendingArrival: false
     };
     state.travel.events = [];
-    addLog(`You set out toward ${destination.name}.`, logTypes.INFO);
-    addTravelEvent(`Departed ${currentZone?.name || 'camp'} bound for ${destination.name}.`, logTypes.INFO);
+    const originName = getLocationName(currentLocation) || 'camp';
+    const destinationName = getLocationName(desired) || 'your destination';
+    addLog(`You set out toward ${destinationName}.`, logTypes.INFO);
+    addTravelEvent(`Departed ${originName} bound for ${destinationName}.`, logTypes.INFO);
+    clearLandmarkFeedback();
     renderTravelScreen();
   }
 
@@ -1523,11 +2018,20 @@
   function completeJourney() {
     const journey = state.travel.journey;
     if (!journey) return;
-    const destination = getZone(journey.destinationId);
-    state.player.location.zoneId = journey.destinationId;
-    setTrackedState(state.travel, 'destinationZoneId', journey.destinationId);
-    addLog(`You arrive at ${destination?.name || 'your destination'}.`, logTypes.SUCCESS);
-    addTravelEvent(`Arrived at ${destination?.name || 'your destination'}.`, logTypes.SUCCESS);
+    const destinationLocation = getLocationByType(journey.destination?.type, journey.destination?.id);
+    const destinationName =
+      getLocationName(destinationLocation) || toTitle(journey.destination?.id || '') || 'your destination';
+    if (destinationLocation) {
+      movePlayerToLocation(destinationLocation);
+      setTravelDestination(destinationLocation.type, destinationLocation.id);
+    } else {
+      const fallback = getCurrentLocation();
+      if (fallback) {
+        setTravelDestination(fallback.type, fallback.id, { silent: true });
+      }
+    }
+    addLog(`You arrive at ${destinationName}.`, logTypes.SUCCESS);
+    addTravelEvent(`Arrived at ${destinationName}.`, logTypes.SUCCESS);
     state.travel.journey = null;
     renderTravelScreen();
     renderTownScreen();
@@ -1548,12 +2052,15 @@
   }
 
   function resolveTravelTurnEvent(journey) {
-    const origin = getZone(journey.originId);
-    const destination = getZone(journey.destinationId);
-    const enemyPool = Array.from(new Set([...(origin?.enemyIds || []), ...(destination?.enemyIds || [])]));
-    const gatherables = Array.from(new Set([...(origin?.gatherables || []), ...(destination?.gatherables || [])]));
-    const npcs = Array.from(new Set([...(origin?.npcIds || []), ...(destination?.npcIds || [])]));
-    const points = Array.from(new Set([...(origin?.pointsOfInterest || []), ...(destination?.pointsOfInterest || [])]));
+    const originLocation =
+      getLocationByType(journey.origin?.type, journey.origin?.id) || getLocationByType('zone', state.player?.location?.zoneId);
+    const destinationLocation = getLocationByType(journey.destination?.type, journey.destination?.id);
+    const originProfile = getLocationTravelProfile(originLocation);
+    const destinationProfile = getLocationTravelProfile(destinationLocation);
+    const enemyPool = uniqueArray([...(originProfile.enemyIds || []), ...(destinationProfile.enemyIds || [])]);
+    const gatherables = uniqueArray([...(originProfile.gatherables || []), ...(destinationProfile.gatherables || [])]);
+    const npcs = uniqueArray([...(originProfile.npcIds || []), ...(destinationProfile.npcIds || [])]);
+    const points = uniqueArray([...(originProfile.pointsOfInterest || []), ...(destinationProfile.pointsOfInterest || [])]);
 
     const weights = [
       { type: 'encounter', weight: enemyPool.length ? 0.28 : 0, data: enemyPool },
@@ -2194,8 +2701,11 @@
     journey.pausedForCombat = false;
     if (outcome === 'defeat') {
       addTravelEvent('The journey falters as you are forced to retreat.', logTypes.DANGER);
-      state.player.location.zoneId = journey.originId;
-      setTrackedState(state.travel, 'destinationZoneId', journey.originId);
+      const originLocation = getLocationByType(journey.origin?.type, journey.origin?.id);
+      if (originLocation) {
+        movePlayerToLocation(originLocation);
+        setTravelDestination(originLocation.type, originLocation.id);
+      }
       state.travel.journey = null;
       renderTravelScreen();
       renderTownScreen();
@@ -3323,6 +3833,10 @@
     return dataIndex.dungeons[id];
   }
 
+  function getLandmark(id) {
+    return dataIndex.landmarks[id];
+  }
+
   function getNpc(id) {
     return dataIndex.npcs[id];
   }
@@ -3671,8 +4185,43 @@
     state.logs = Array.isArray(saved.logs) ? saved.logs.slice(-100) : [];
     state.logOverlayOpen = false;
     Object.assign(state.selected, saved.selected || {});
-    const loadedTravel = saved.travel && typeof saved.travel === 'object' ? saved.travel : {};
+    const loadedTravel = saved.travel && typeof saved.travel === 'object' ? { ...saved.travel } : {};
+    const legacyDestinationZoneId = loadedTravel.destinationZoneId;
+    delete loadedTravel.destinationZoneId;
+    const journeyData = loadedTravel.journey && typeof loadedTravel.journey === 'object' ? { ...loadedTravel.journey } : null;
+    delete loadedTravel.journey;
+    let normalizedDestination = null;
+    if (loadedTravel.destination && typeof loadedTravel.destination === 'object') {
+      const type = ['zone', 'landmark'].includes(loadedTravel.destination.type)
+        ? loadedTravel.destination.type
+        : 'zone';
+      const id = loadedTravel.destination.id || null;
+      normalizedDestination = { type, id };
+    } else if (legacyDestinationZoneId) {
+      normalizedDestination = { type: 'zone', id: legacyDestinationZoneId };
+    }
+    let normalizedJourney = null;
+    if (journeyData) {
+      const origin = journeyData.origin || (journeyData.originId ? { type: 'zone', id: journeyData.originId } : null);
+      const destination =
+        journeyData.destination || (journeyData.destinationId ? { type: 'zone', id: journeyData.destinationId } : null);
+      normalizedJourney = {
+        ...journeyData,
+        origin,
+        destination
+      };
+      delete normalizedJourney.originId;
+      delete normalizedJourney.destinationId;
+    }
     Object.assign(state.travel, createDefaultTravelState(), loadedTravel);
+    state.travel.destination = normalizedDestination || state.travel.destination || { type: 'zone', id: null };
+    if (!['zone', 'landmark'].includes(state.travel.destination.type)) {
+      state.travel.destination.type = 'zone';
+    }
+    if (!state.travel.destination.id && legacyDestinationZoneId && state.travel.destination.type === 'zone') {
+      state.travel.destination.id = legacyDestinationZoneId;
+    }
+    state.travel.journey = normalizedJourney;
     if (!['balanced', 'gathering', 'combat'].includes(state.travel.focus)) {
       state.travel.focus = 'balanced';
     }
@@ -3685,6 +4234,11 @@
       state.travel.journey.pendingArrival = Boolean(state.travel.journey.pendingArrival);
     } else {
       state.travel.journey = null;
+    }
+    if (!state.travel.landmarkFeedback || typeof state.travel.landmarkFeedback !== 'object') {
+      state.travel.landmarkFeedback = null;
+    } else if (typeof state.travel.landmarkFeedback.message !== 'string') {
+      state.travel.landmarkFeedback = null;
     }
     state.combat = createDefaultCombatState();
     sanitizeLoadedState();
@@ -3706,6 +4260,20 @@
     };
     player.resources = player.resources || {};
     player.location = player.location || { zoneId: data.zones[0]?.id || null };
+    if (!getZone(player.location.zoneId)) {
+      player.location.zoneId = data.zones[0]?.id || null;
+    }
+    if (player.location.landmarkId && !getLandmark(player.location.landmarkId)) {
+      player.location.landmarkId = null;
+    } else if (player.location.landmarkId) {
+      const landmark = getLandmark(player.location.landmarkId);
+      if (landmark) {
+        const connectedZones = (landmark.connectedZoneIds || []).filter((zoneId) => getZone(zoneId));
+        if (!connectedZones.includes(player.location.zoneId) && connectedZones.length) {
+          player.location.zoneId = connectedZones[0];
+        }
+      }
+    }
     player.professions = Array.isArray(player.professions) ? player.professions : [];
     player.quests = player.quests || { active: [], completed: [] };
     player.quests.active = (player.quests.active || [])
@@ -3743,8 +4311,26 @@
     if (!state.player.location || !getZone(state.player.location.zoneId)) {
       state.player.location = { zoneId: data.zones[0]?.id || null };
     }
-    if (!getZone(state.travel.destinationZoneId)) {
-      state.travel.destinationZoneId = state.player.location.zoneId;
+    if (state.player.location.landmarkId) {
+      const landmark = getLandmark(state.player.location.landmarkId);
+      if (!landmark) {
+        state.player.location.landmarkId = null;
+      } else {
+        const connectedZones = (landmark.connectedZoneIds || []).filter((zoneId) => getZone(zoneId));
+        if (!connectedZones.includes(state.player.location.zoneId) && connectedZones.length) {
+          state.player.location.zoneId = connectedZones[0];
+        }
+      }
+    }
+    delete state.travel.destinationZoneId;
+    const currentLocation = getCurrentLocation();
+    const destination = getTravelDestination();
+    if (!['zone', 'landmark'].includes(destination.type)) {
+      state.travel.destination = { type: 'zone', id: destination.id || state.player.location.zoneId || null };
+    }
+    const resolvedDestination = getLocationByType(state.travel.destination.type, state.travel.destination.id);
+    if (!resolvedDestination && currentLocation) {
+      state.travel.destination = { type: currentLocation.type, id: currentLocation.id };
     }
     if (state.selected.npcId && !getNpc(state.selected.npcId)) {
       state.selected.npcId = null;
@@ -3763,9 +4349,18 @@
       }
     }
     if (state.travel.journey) {
-      const destinationValid = getZone(state.travel.journey.destinationId);
-      if (!destinationValid) {
+      delete state.travel.journey.originId;
+      delete state.travel.journey.destinationId;
+      const originLocation = getLocationByType(state.travel.journey.origin?.type, state.travel.journey.origin?.id);
+      const destinationLocation = getLocationByType(
+        state.travel.journey.destination?.type,
+        state.travel.journey.destination?.id
+      );
+      if (!originLocation || !destinationLocation) {
         state.travel.journey = null;
+      } else {
+        state.travel.journey.origin = { type: originLocation.type, id: originLocation.id };
+        state.travel.journey.destination = { type: destinationLocation.type, id: destinationLocation.id };
       }
     }
     if (!screenRenderers[state.currentScreen]) {
@@ -3825,10 +4420,11 @@
 
   function createDefaultTravelState() {
     return {
-      destinationZoneId: null,
+      destination: { type: 'zone', id: null },
       focus: 'balanced',
       journey: null,
-      events: []
+      events: [],
+      landmarkFeedback: null
     };
   }
 

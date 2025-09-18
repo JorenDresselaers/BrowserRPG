@@ -197,10 +197,19 @@
             <section class="panel">
               <h3>Route Notes</h3>
               <ul id="travelDestinationMeta" class="bullet-list"></ul>
+              <h3>Waypoints En Route</h3>
+              <ul id="travelDestinationLandmarks" class="bullet-list"></ul>
               <h3>Highlights</h3>
               <ul id="travelDestinationHighlights" class="bullet-list"></ul>
               <h3>Threat Assessment</h3>
               <ul id="travelDestinationThreats" class="bullet-list"></ul>
+              <div id="currentLandmarkPanel" class="landmark-panel hidden" aria-live="polite">
+                <h3 id="currentLandmarkTitle">Roadside Landmark</h3>
+                <p id="currentLandmarkDescription" class="description"></p>
+                <ul id="currentLandmarkDetails" class="bullet-list"></ul>
+                <div id="currentLandmarkActions" class="button-column"></div>
+                <div id="currentLandmarkFeedback" class="screen-feedback" role="status"></div>
+              </div>
               <div class="progress-container">
                 <span>Journey Progress</span>
                 <div class="progress-bar">
