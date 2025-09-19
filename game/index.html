@@ -61,6 +61,7 @@
         </section>
         <nav id="screenNav" class="sidebar-nav" aria-label="Game screens">
           <button class="active" data-screen="character" type="button">Character</button>
+          <button data-screen="camp" type="button">Camp</button>
           <button data-screen="professions" type="button">Professions</button>
           <button data-screen="travel" type="button">Travel</button>
           <button data-screen="trade" type="button">Trade</button>
@@ -70,7 +71,6 @@
         </nav>
         <div class="sidebar-actions">
           <button id="inventoryToggle" type="button">Inventory</button>
-          <button id="restButton" type="button">Rest at Camp</button>
         </div>
       </aside>
       <main class="main-area">
@@ -117,6 +117,52 @@
               Spend talent points to unlock new strengths for your hero.
             </div>
           </section>
+        </section>
+
+        <section id="screen-camp" class="main-screen" aria-labelledby="campTitle">
+          <header class="screen-header">
+            <h2 id="campTitle">Camp</h2>
+            <p class="screen-subtitle">Prepare your abilities and settle in before a new day dawns.</p>
+          </header>
+          <div class="camp-grid">
+            <section class="panel camp-panel">
+              <header class="panel-header">
+                <h3>Prepared Abilities</h3>
+                <p class="panel-subtitle">Choose up to <span id="campAbilitySlots">3</span> abilities to ready for combat.</p>
+              </header>
+              <ul id="campPreparedList" class="camp-prepared-list"></ul>
+            </section>
+            <section class="panel camp-panel">
+              <header class="panel-header">
+                <h3>Ability Library</h3>
+                <p class="panel-subtitle">Toggle abilities to add or remove them from your prepared list.</p>
+              </header>
+              <ul id="campAbilityList" class="camp-ability-list"></ul>
+              <div id="campAbilityFeedback" class="screen-feedback" role="status" aria-live="polite">
+                Select abilities to prepare them for the next battle.
+              </div>
+            </section>
+            <section class="panel camp-panel">
+              <header class="panel-header">
+                <h3>Camp Routine</h3>
+                <p class="panel-subtitle">End the day to recover your strength and resources.</p>
+              </header>
+              <div class="camp-metrics">
+                <div class="camp-metric">
+                  <span class="label">Current Day</span>
+                  <span class="value" id="campCurrentDay">-</span>
+                </div>
+                <div class="camp-metric">
+                  <span class="label">Camp Supplies</span>
+                  <span class="value" id="campSuppliesTotal">0</span>
+                </div>
+              </div>
+              <button id="campEndDayButton" type="button">End the Day</button>
+              <div id="campRestFeedback" class="screen-feedback" role="status" aria-live="polite">
+                Camp is calm. Prepare your abilities before resting.
+              </div>
+            </section>
+          </div>
         </section>
 
         <section id="screen-professions" class="main-screen" aria-labelledby="professionsTitle">
@@ -307,25 +353,30 @@
         <p class="combat-subtitle">Resolve the clash before moving on.</p>
       </header>
       <div class="combat-content">
-        <div class="combat-column">
-          <p class="current-zone"><strong>Current Region:</strong> <span id="combatCurrentZone">-</span></p>
-          <div id="combatActions" class="combat-actions">
-            <button id="combatStrikeButton" type="button">Strike</button>
-            <button id="combatAbilityButton" type="button">Ability</button>
-            <button id="combatGuardButton" type="button">Guard</button>
-            <button id="combatFleeButton" type="button">Attempt Flee</button>
+        <section class="combat-overview">
+          <div class="combat-actors">
+            <article id="combatPlayerPanel" class="combat-actor" aria-label="Hero status"></article>
+            <article id="combatEnemyPanel" class="combat-actor" aria-label="Enemy status"></article>
           </div>
-        </div>
-        <div class="combat-column">
+          <div class="combat-actions" id="combatActions">
+            <div class="combat-actions__row">
+              <button id="combatStrikeButton" type="button">Strike</button>
+              <button id="combatGuardButton" type="button">Guard</button>
+              <button id="combatFleeButton" type="button">Attempt Flee</button>
+            </div>
+            <div class="combat-abilities" id="combatAbilityList" aria-label="Prepared abilities"></div>
+          </div>
+        </section>
+        <section class="combat-insights">
+          <p class="current-zone"><strong>Current Region:</strong> <span id="combatCurrentZone">-</span></p>
+          <div id="combatStatus" class="details-card"></div>
           <h3>Enemy Intel</h3>
           <div id="enemyDetails" class="details-card"></div>
-          <h3>Battle Status</h3>
-          <div id="combatStatus" class="details-card"></div>
           <h3>Battle Log</h3>
           <div class="details-card combat-log">
             <div id="combatLog" class="log-entries"></div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   </div>
