@@ -211,6 +211,7 @@ button:disabled {
 
 .main-area {
   flex: 1;
+  min-width: 0;
   padding: 2rem 2.25rem 3rem;
   display: flex;
   flex-direction: column;
@@ -253,6 +254,132 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.camp-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.camp-panel {
+  gap: 1.25rem;
+}
+
+.camp-prepared-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.camp-prepared-list li {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.camp-prepared-list li span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.camp-ability-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.camp-ability {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.camp-ability__toggle {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.85rem;
+  padding: 0.95rem 1rem;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.camp-ability__toggle input {
+  margin-top: 0.2rem;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.camp-ability__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.camp-ability__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.camp-ability__name {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.camp-ability__meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.camp-ability__details {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.camp-ability.selected {
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgba(255, 184, 108, 0.18);
+  transform: translateY(-2px);
+}
+
+.camp-metrics {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.camp-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.camp-metric .label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.camp-metric .value {
+  font-size: 1.05rem;
+  font-weight: 600;
 }
 
 .panel-header {
@@ -1100,18 +1227,148 @@ textarea:focus {
 
 .combat-content {
   display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.75rem;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.combat-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.combat-actors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.combat-actor {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.combat-actor__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.combat-actor__name {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.combat-actor__meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.combat-actor__vitals {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.combat-actor__vital {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.95rem;
+}
+
+.combat-actor__effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.combat-effect {
+  padding: 0.25rem 0.6rem;
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .combat-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.combat-actions__row {
   display: grid;
   gap: 0.75rem;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
-.combat-actions button {
+.combat-actions__row button {
   background: linear-gradient(135deg, rgba(248, 113, 113, 0.35), rgba(248, 250, 252, 0.05));
+}
+
+.combat-abilities {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.combat-ability-button {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.combat-ability-button .ability-name {
+  font-weight: 600;
+}
+
+.combat-ability-button .ability-meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.combat-ability-button .ability-description {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.combat-ability-button.active {
+  border-color: var(--accent);
+  box-shadow: 0 14px 30px rgba(255, 184, 108, 0.18);
+}
+
+.combat-ability-button:disabled {
+  opacity: 0.55;
+}
+
+.combat-insights {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.combat-status__summary {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.95rem;
 }
 
 .combat-log {
@@ -1261,16 +1518,25 @@ textarea:focus {
     width: 100%;
     max-height: none;
     position: relative;
+    padding: 1.5rem 1.5rem 1.75rem;
   }
 
   .main-area {
-    padding: 1.5rem;
+    padding: 1.75rem 1.5rem 2rem;
   }
 }
 
 @media (max-width: 640px) {
+  :root {
+    font-size: 15px;
+  }
+
   .sidebar-nav button {
     font-size: 0.95rem;
+  }
+
+  .sidebar {
+    gap: 1rem;
   }
 
   .screen-header h2 {
@@ -1279,6 +1545,27 @@ textarea:focus {
 
   .combat-container {
     padding: 1.25rem;
+  }
+
+  .combat-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .combat-abilities {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .combat-actions__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .camp-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .camp-ability__header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .log-overlay {
