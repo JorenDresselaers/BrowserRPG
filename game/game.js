@@ -1066,7 +1066,6 @@
           metaParts.unshift(`${manaCost} mana`);
         }
         const metaLabel = metaParts.join(' • ');
-        const manaCost = getAbilityManaCostForPlayer(player, definition);
         const detailSummary = getAbilityDetailSummary(definition);
         const detailLine = detailSummary
           ? `<span class="ability-entry__details">${detailSummary}</span>`
