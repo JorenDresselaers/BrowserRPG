@@ -20,151 +20,146 @@
   const PASSIVE_MANA_REGEN_RATE = 0.06;
   const DEFAULT_INVENTORY_SLOT_COUNT = 24;
   const DEFAULT_MAX_STACK_SIZE = 1;
+  const DEFAULT_PREPARED_ABILITY_SLOTS = 3;
 
   const abilityLibrary = {
     'Arcane Surge': {
-      usesPerRest: 3,
+      usesPerRest: 2,
       manaCost: 22,
-      damageMultiplier: 1.3,
-      bonusDamage: 12,
-      defenseMitigation: 0.15,
-      minimumDamage: 11,
-      description: 'Overcharge your spellwork, striking with +12 bonus lightning damage while cutting through 15% of enemy defenses.'
+      description: 'Overcharge your spellwork, striking hard and sharpening your mind for the next exchanges.',
+      effects: [
+        { type: 'damage', multiplier: 1.3, bonus: 12, defenseMitigation: 0.15, minimum: 11 },
+        { type: 'buff', stat: 'intellect', amount: 4, duration: 2 }
+      ]
     },
     'Arrow Storm': {
-      usesPerRest: 3,
       manaCost: 20,
-      damageMultiplier: 1.3,
-      bonusDamage: 6,
-      defenseMitigation: 0.1,
-      minimumDamage: 10,
-      description: 'Blanket an area in arrows, adding +6 bonus damage and overwhelming foes even through 10% of their armor.'
+      description: 'Blanket an area in arrows, overwhelming foes with relentless pressure.',
+      effects: [
+        { type: 'damage', multiplier: 1.3, bonus: 6, defenseMitigation: 0.1, minimum: 10 }
+      ]
     },
     'Bestial Bond': {
       usesPerRest: 2,
       manaCost: 16,
-      damageMultiplier: 1.15,
-      bonusDamage: 11,
-      defenseMitigation: 0.18,
-      minimumDamage: 9,
-      description: 'Fight alongside your companion for +11 bonus damage while your combined assault ignores 18% of the target\'s defenses.'
+      description: 'Fight alongside your companion, striking together and letting the frenzy build.',
+      effects: [
+        { type: 'damage', multiplier: 1.15, bonus: 11, defenseMitigation: 0.18, minimum: 9 },
+        { type: 'buff', stat: 'attack', amount: 10, duration: 2 }
+      ]
     },
     'Bulwark': {
       usesPerRest: 2,
       manaCost: 14,
-      damageMultiplier: 0.95,
-      bonusDamage: 9,
-      defenseMitigation: 0.25,
-      minimumDamage: 8,
-      description: 'Set your shield and counter with +9 bonus damage, shrugging off 25% of incoming defense as you hold the line.'
+      description: 'Set your shield, counter with force, and let the impact harden your guard.',
+      effects: [
+        { type: 'damage', multiplier: 0.95, bonus: 9, defenseMitigation: 0.25, minimum: 8 },
+        { type: 'buff', stat: 'armor', amount: 8, duration: 2 }
+      ]
     },
     'Camouflaged Step': {
-      usesPerRest: 3,
       manaCost: 12,
-      damageMultiplier: 1.05,
-      bonusDamage: 7,
-      defenseMitigation: 0.22,
-      minimumDamage: 7,
-      description: 'Slip from cover to deliver +7 bonus damage, striking from the shadows while bypassing 22% of a foe\'s guard.'
+      description: 'Slip from cover to strike before vanishing again in a burst of speed.',
+      effects: [
+        { type: 'damage', multiplier: 1.05, bonus: 7, defenseMitigation: 0.22, minimum: 7 },
+        { type: 'buff', stat: 'speed', amount: 6, duration: 1 }
+      ]
     },
     "Guardian's Roar": {
       usesPerRest: 2,
       manaCost: 12,
-      damageMultiplier: 1,
-      bonusDamage: 7,
-      defenseMitigation: 0.12,
-      minimumDamage: 7,
-      description: 'Unleash a rallying shout that deals steady damage (+7) and rattles foes enough to pierce 12% of their armor.'
+      description: 'Unleash a rallying shout that rattles foes and steels your defenses.',
+      effects: [
+        { type: 'damage', multiplier: 1, bonus: 7, defenseMitigation: 0.12, minimum: 7 },
+        { type: 'buff', stat: 'armor', amount: 6, duration: 2 },
+        { type: 'buff', stat: 'attack', amount: 5, duration: 2 }
+      ]
     },
     'Lightning Coil': {
-      usesPerRest: 3,
       manaCost: 18,
-      damageMultiplier: 1.2,
-      bonusDamage: 10,
-      defenseMitigation: 0.12,
-      minimumDamage: 10,
-      description: 'Channel chained lightning for +10 bonus damage, ignoring 12% of the target\'s protection as the bolts arc.'
+      description: 'Channel chained lightning that snaps across the battlefield.',
+      effects: [
+        { type: 'damage', multiplier: 1.2, bonus: 10, defenseMitigation: 0.12, minimum: 10 }
+      ]
     },
     'Radiant Ward': {
       usesPerRest: 2,
       manaCost: 15,
-      damageMultiplier: 0.95,
-      bonusDamage: 8,
-      defenseMitigation: 0.28,
-      minimumDamage: 8,
-      description: 'Erect a flare of light that deals +8 bonus damage while repelling 28% of an enemy\'s armor with consecrated force.'
+      description: 'Erect a flare of light that scorches the foe and mends your wounds.',
+      effects: [
+        { type: 'damage', multiplier: 0.95, bonus: 8, defenseMitigation: 0.28, minimum: 8 },
+        { type: 'heal', percent: 0.08, amount: 10 }
+      ]
     },
     'Revitalizing Hymn': {
       usesPerRest: 2,
       manaCost: 18,
-      damageMultiplier: 1.05,
-      bonusDamage: 9,
-      defenseMitigation: 0.2,
-      minimumDamage: 9,
-      description: 'Sing a battle hymn for +9 bonus radiant damage, cutting through 20% of enemy defenses as faith steels your allies.'
+      description: 'Sing a battle hymn that harms foes while restoring your resolve.',
+      effects: [
+        { type: 'damage', multiplier: 1.05, bonus: 9, defenseMitigation: 0.2, minimum: 9 },
+        { type: 'heal', percent: 0.12, amount: 12 },
+        { type: 'resource', resource: 'mana', amount: 8 }
+      ]
     },
     'Shield Slam': {
-      usesPerRest: 3,
       manaCost: 15,
-      damageMultiplier: 1.1,
-      bonusDamage: 8,
-      defenseMitigation: 0.2,
-      minimumDamage: 8,
-      description: 'Drive your shield into the foe, adding +8 bonus damage and battering 20% of their defenses aside.'
+      description: 'Drive your shield into the foe, battering them and steadying your stance.',
+      effects: [
+        { type: 'damage', multiplier: 1.1, bonus: 8, defenseMitigation: 0.2, minimum: 8 },
+        { type: 'buff', stat: 'armor', amount: 4, duration: 1 }
+      ]
     },
     'Shieldwall': {
       usesPerRest: 2,
       manaCost: 18,
-      damageMultiplier: 0.85,
-      bonusDamage: 6,
-      defenseMitigation: 0.55,
-      minimumDamage: 6,
-      description: 'Lock shields with an explosive bash that still lands +6 bonus damage while shrugging off 55% of retaliation.'
+      description: 'Lock shields with an explosive bash that raises an enduring barrier.',
+      effects: [
+        { type: 'damage', multiplier: 0.85, bonus: 6, defenseMitigation: 0.55, minimum: 6 },
+        { type: 'buff', stat: 'armor', amount: 12, duration: 3 }
+      ]
     },
     'Solar Aegis': {
       usesPerRest: 2,
       manaCost: 18,
-      damageMultiplier: 1,
-      bonusDamage: 8,
-      defenseMitigation: 0.28,
-      minimumDamage: 9,
-      description: 'Wreathe yourself in solar flame, striking for +8 bonus damage and burning through 28% of enemy armor.'
+      description: 'Wreathe yourself in solar flame, searing foes and drawing on radiant strength.',
+      effects: [
+        { type: 'damage', multiplier: 1, bonus: 8, defenseMitigation: 0.28, minimum: 9 },
+        { type: 'heal', percent: 0.06, amount: 8 },
+        { type: 'buff', stat: 'attack', amount: 6, duration: 2 }
+      ]
     },
     'Static Torrent': {
       usesPerRest: 2,
       manaCost: 24,
-      damageMultiplier: 1.4,
-      bonusDamage: 12,
-      defenseMitigation: 0.05,
-      minimumDamage: 14,
-      description: 'Let loose a roaring torrent of lightning for +12 bonus damage, overwhelming foes even through heavy guard.'
+      description: 'Let loose a roaring torrent of lightning that leaves power crackling in its wake.',
+      effects: [
+        { type: 'damage', multiplier: 1.4, bonus: 12, defenseMitigation: 0.05, minimum: 14 },
+        { type: 'buff', stat: 'attack', amount: 6, duration: 2 }
+      ]
     },
     'Sunlance': {
-      usesPerRest: 3,
       manaCost: 16,
-      damageMultiplier: 1.15,
-      bonusDamage: 9,
-      defenseMitigation: 0.15,
-      minimumDamage: 9,
-      description: 'Call down a spear of solar fire, lancing for +9 bonus damage and piercing 15% of protective wards.'
+      description: 'Call down a spear of solar fire, piercing the foe and bathing you in warmth.',
+      effects: [
+        { type: 'damage', multiplier: 1.15, bonus: 9, defenseMitigation: 0.15, minimum: 9 },
+        { type: 'heal', amount: 6 }
+      ]
     },
     'Tempest Barrier': {
       usesPerRest: 2,
       manaCost: 16,
-      damageMultiplier: 0.9,
-      bonusDamage: 6,
-      defenseMitigation: 0.35,
-      minimumDamage: 8,
-      description: 'Summon a whirling barrier that slams for +6 bonus damage while shunting 35% of enemy defense aside.'
+      description: 'Summon a whirling barrier that bludgeons attackers and stiffens your guard.',
+      effects: [
+        { type: 'damage', multiplier: 0.9, bonus: 6, defenseMitigation: 0.35, minimum: 8 },
+        { type: 'buff', stat: 'armor', amount: 10, duration: 2 }
+      ]
     },
     'Twin Arrows': {
-      usesPerRest: 3,
       manaCost: 14,
-      damageMultiplier: 1.05,
-      bonusDamage: 10,
-      defenseMitigation: 0.18,
-      minimumDamage: 8,
-      description: 'Loose a pair of arrows for +10 bonus damage, threading past 18% of the target\'s armor.'
+      description: 'Loose a pair of arrows in quick succession, peppering the enemy from range.',
+      effects: [
+        { type: 'damage', multiplier: 1.05, bonus: 10, defenseMitigation: 0.18, minimum: 8 }
+      ]
     }
   };
 
@@ -201,7 +196,6 @@
     classDetails: document.getElementById('classDetails'),
     screenNav: document.getElementById('screenNav'),
     inventoryToggle: document.getElementById('inventoryToggle'),
-    restButton: document.getElementById('restButton'),
     playerName: document.getElementById('playerName'),
     playerClass: document.getElementById('playerClass'),
     playerLevel: document.getElementById('playerLevel'),
@@ -209,6 +203,14 @@
     playerGold: document.getElementById('playerGold'),
     adventureDay: document.getElementById('adventureDay'),
     campSupplies: document.getElementById('campSuppliesValue'),
+    campAbilityList: document.getElementById('campAbilityList'),
+    campPreparedList: document.getElementById('campPreparedList'),
+    campAbilitySlots: document.getElementById('campAbilitySlots'),
+    campAbilityFeedback: document.getElementById('campAbilityFeedback'),
+    campRestFeedback: document.getElementById('campRestFeedback'),
+    campEndDayButton: document.getElementById('campEndDayButton'),
+    campCurrentDay: document.getElementById('campCurrentDay'),
+    campSuppliesTotal: document.getElementById('campSuppliesTotal'),
     healthBar: document.getElementById('healthBar'),
     healthValue: document.getElementById('healthValue'),
     manaBar: document.getElementById('manaBar'),
@@ -251,9 +253,11 @@
     enemyDetails: document.getElementById('enemyDetails'),
     combatActions: document.getElementById('combatActions'),
     combatStrikeButton: document.getElementById('combatStrikeButton'),
-    combatAbilityButton: document.getElementById('combatAbilityButton'),
     combatGuardButton: document.getElementById('combatGuardButton'),
     combatFleeButton: document.getElementById('combatFleeButton'),
+    combatAbilityList: document.getElementById('combatAbilityList'),
+    combatPlayerPanel: document.getElementById('combatPlayerPanel'),
+    combatEnemyPanel: document.getElementById('combatEnemyPanel'),
     combatStatus: document.getElementById('combatStatus'),
     combatLog: document.getElementById('combatLog'),
     npcSelect: document.getElementById('npcSelect'),
@@ -307,7 +311,9 @@
     profession: 'Work your trade to gather resources or craft items.',
     trade: 'Choose goods to buy or sell with the merchants.',
     town: 'Speak with residents, patrol the streets, or request help.',
-    talent: 'Spend talent points to unlock new strengths for your hero.'
+    talent: 'Spend talent points to unlock new strengths for your hero.',
+    camp: 'Select abilities to prepare them for the next battle.',
+    campRest: 'Camp is calm. Prepare your abilities before resting.'
   };
 
   const equipmentSlotMap = {
@@ -326,6 +332,7 @@
 
   const screenRenderers = {
     character: renderCharacterScreen,
+    camp: renderCampScreen,
     professions: renderProfessionScreen,
     travel: renderTravelScreen,
     trade: renderTradeScreen,
@@ -387,6 +394,8 @@
     if (channel === 'trade') return elements.tradeFeedback;
     if (channel === 'town') return elements.townFeedback;
     if (channel === 'talent') return elements.talentFeedback;
+    if (channel === 'camp') return elements.campAbilityFeedback;
+    if (channel === 'campRest') return elements.campRestFeedback;
     return null;
   }
 
@@ -434,9 +443,8 @@
     setupTownControls();
     setupTradingControls();
     setupProfessionControls();
-    setupAbilitySelection();
+    setupCampControls();
     setupTalentControls();
-    elements.restButton.addEventListener('click', restAtCamp);
     const restored = restoreSavedGame();
     if (!restored) {
       elements.newGameModal.classList.remove('hidden');
@@ -601,6 +609,8 @@
         segments: 0
       },
       abilityUses: {},
+      abilitySlots: DEFAULT_PREPARED_ABILITY_SLOTS,
+      preparedAbilities: [],
       professions: [...(classData.startingProfessions || [])],
       quests: {
         active: [],
@@ -619,6 +629,7 @@
     ensureTalentState(player);
     syncResourceCaps(player);
     resetAbilityUses(player);
+    ensurePreparedAbilities(player);
     return player;
   }
 
@@ -716,9 +727,16 @@
 
   function setupCombatControls() {
     elements.combatStrikeButton?.addEventListener('click', () => takeCombatAction('strike'));
-    elements.combatAbilityButton?.addEventListener('click', () => takeCombatAction('ability'));
     elements.combatGuardButton?.addEventListener('click', () => takeCombatAction('guard'));
     elements.combatFleeButton?.addEventListener('click', () => takeCombatAction('flee'));
+    elements.combatAbilityList?.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-combat-ability]');
+      if (!button || button.disabled) return;
+      const abilityName = button.dataset.combatAbility;
+      if (!abilityName) return;
+      setTrackedState(state.selected, 'abilityName', abilityName);
+      takeCombatAction('ability', abilityName);
+    });
   }
 
   function setupTownControls() {
@@ -785,19 +803,15 @@
     });
   }
 
-  function setupAbilitySelection() {
-    if (!elements.playerAbilities) return;
-    elements.playerAbilities.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-ability-name]');
-      if (!button) return;
-      const abilityName = button.dataset.abilityName;
-      if (!abilityName || !state.player?.abilities?.includes(abilityName)) return;
-      if (setTrackedState(state.selected, 'abilityName', abilityName)) {
-        renderPlayerAbilities();
-        renderCombatState();
-        scheduleSave();
-      }
-    });
+  function setupCampControls() {
+    if (elements.campAbilityList) {
+      elements.campAbilityList.addEventListener('change', (event) => {
+        const input = event.target.closest('input[data-camp-ability]');
+        if (!input) return;
+        handleCampAbilityToggle(input.dataset.campAbility, input.checked);
+      });
+    }
+    elements.campEndDayButton?.addEventListener('click', restAtCamp);
   }
 
   function setupTalentControls() {
@@ -853,6 +867,7 @@
     syncResourceCaps(state.player);
     updatePlayerPanel();
     renderCharacterScreen();
+    renderCampScreen();
     renderProfessionScreen();
     renderTravelScreen();
     renderTradeScreen();
@@ -922,21 +937,102 @@
       .join('');
   }
 
+  function getAbilityEffects(definition) {
+    if (!definition) return [];
+    if (Array.isArray(definition.effects) && definition.effects.length) {
+      return definition.effects.map((effect) => ({ ...effect }));
+    }
+    const multiplier = definition.damageMultiplier ?? 1.1;
+    const bonus = definition.bonus ?? definition.bonusDamage ?? 8;
+    const defenseMitigation = definition.defenseMitigation ?? 0.2;
+    const minimum = definition.minimum ?? definition.minimumDamage ?? 8;
+    return [
+      {
+        type: 'damage',
+        multiplier,
+        bonus,
+        defenseMitigation,
+        minimum
+      }
+    ];
+  }
+
+  function formatCombatStatLabel(stat) {
+    if (!stat) return 'Stat';
+    if (stat === 'attack') return 'Attack Power';
+    return toTitle(stat);
+  }
+
   function getAbilityDetailSummary(definition) {
     if (!definition) return '';
+    const effects = getAbilityEffects(definition);
     const parts = [];
-    if (Number.isFinite(definition.damageMultiplier)) {
-      parts.push(`${Math.round(definition.damageMultiplier * 100)}% weapon power`);
-    }
-    if (Number.isFinite(definition.bonusDamage) && definition.bonusDamage !== 0) {
-      parts.push(`+${Math.round(definition.bonusDamage)} bonus damage`);
-    }
-    if (Number.isFinite(definition.defenseMitigation) && definition.defenseMitigation > 0) {
-      parts.push(`Ignores ${Math.round(definition.defenseMitigation * 100)}% defense`);
-    }
-    if (Number.isFinite(definition.minimumDamage) && definition.minimumDamage > 0) {
-      parts.push(`Minimum ${Math.round(definition.minimumDamage)} damage`);
-    }
+    effects.forEach((effect) => {
+      if (!effect || typeof effect !== 'object') return;
+      if (effect.type === 'damage' || (!effect.type && effect.multiplier != null)) {
+        const segments = [];
+        if (Number.isFinite(effect.multiplier)) {
+          segments.push(`${Math.round(effect.multiplier * 100)}% weapon power`);
+        }
+        const bonus = Number.isFinite(effect.bonus)
+          ? effect.bonus
+          : Number.isFinite(effect.bonusDamage)
+          ? effect.bonusDamage
+          : null;
+        if (bonus && bonus !== 0) {
+          segments.push(`${bonus > 0 ? '+' : ''}${Math.round(bonus)} bonus damage`);
+        }
+        const mitigation = Number.isFinite(effect.defenseMitigation)
+          ? effect.defenseMitigation
+          : null;
+        if (mitigation && mitigation > 0) {
+          segments.push(`Ignores ${Math.round(mitigation * 100)}% defense`);
+        }
+        const minimum = Number.isFinite(effect.minimum)
+          ? effect.minimum
+          : Number.isFinite(effect.minimumDamage)
+          ? effect.minimumDamage
+          : null;
+        if (minimum && minimum > 0) {
+          segments.push(`Minimum ${Math.round(minimum)} damage`);
+        }
+        if (segments.length) {
+          parts.push(segments.join(' • '));
+        }
+        return;
+      }
+      if (effect.type === 'heal') {
+        const healParts = [];
+        if (Number.isFinite(effect.amount) && effect.amount > 0) {
+          healParts.push(`Heals ${Math.round(effect.amount)} health`);
+        }
+        if (Number.isFinite(effect.percent) && effect.percent > 0) {
+          healParts.push(`Restores ${Math.round(effect.percent * 100)}% health`);
+        }
+        if (healParts.length) {
+          parts.push(healParts.join(' and '));
+        }
+        return;
+      }
+      if (effect.type === 'resource') {
+        const amount = Number.isFinite(effect.amount) ? Math.round(effect.amount) : null;
+        const resourceLabel = effect.resource ? formatCombatStatLabel(effect.resource) : 'Resource';
+        if (amount) {
+          parts.push(`Restores ${amount} ${resourceLabel}`);
+        }
+        return;
+      }
+      if (effect.type === 'buff') {
+        const amount = Number.isFinite(effect.amount) ? Math.round(effect.amount) : 0;
+        if (!amount) return;
+        const statLabel = formatCombatStatLabel(effect.stat);
+        let text = `${amount > 0 ? '+' : ''}${amount} ${statLabel}`;
+        if (Number.isFinite(effect.duration) && effect.duration > 0) {
+          text += ` (${effect.duration} turn${effect.duration === 1 ? '' : 's'})`;
+        }
+        parts.push(text);
+      }
+    });
     return parts.join(' • ');
   }
 
@@ -953,17 +1049,24 @@
       elements.playerAbilities.innerHTML = '<li>No abilities learned yet.</li>';
       return;
     }
-    const activeAbility = getActiveAbilityName();
+    const focusedAbility = getActiveAbilityName();
+    const preparedList = getPreparedAbilities();
+    const preparedSet = new Set(preparedList);
     const items = abilities
       .map((abilityName) => {
         const definition = getAbilityDefinition(abilityName);
         const usesPerRest = definition?.usesPerRest;
         const usesRemaining = getAbilityUsesRemaining(abilityName);
-        const usesLabel = Number.isFinite(usesPerRest)
-          ? `${usesRemaining}/${usesPerRest} uses per rest`
-          : 'At-will';
+        const metaParts = [];
+        if (Number.isFinite(usesPerRest)) {
+          metaParts.push(`${usesRemaining}/${usesPerRest} uses`);
+        }
         const manaCost = getAbilityManaCostForPlayer(player, definition);
-        const manaLabel = Number.isFinite(manaCost) ? `${manaCost} mana` : 'mana cost varies';
+        if (Number.isFinite(manaCost)) {
+          metaParts.unshift(`${manaCost} mana`);
+        }
+        const metaLabel = metaParts.join(' • ');
+        const manaCost = getAbilityManaCostForPlayer(player, definition);
         const detailSummary = getAbilityDetailSummary(definition);
         const detailLine = detailSummary
           ? `<span class="ability-entry__details">${detailSummary}</span>`
@@ -971,19 +1074,30 @@
         const description = definition?.description
           ? `<span class="ability-entry__description">${definition.description}</span>`
           : '';
-        const activeClass = abilityName === activeAbility ? ' active' : '';
-        const statusBadge = abilityName === activeAbility
-          ? '<span class="ability-entry__badge">Active</span>'
-          : '';
+        const badges = [];
+        const preparedIndex = preparedList.indexOf(abilityName);
+        if (preparedIndex !== -1) {
+          badges.push(`<span class="ability-entry__badge">Prepared • Slot ${preparedIndex + 1}</span>`);
+        }
+        if (abilityName === focusedAbility) {
+          badges.push('<span class="ability-entry__badge">Combat Focus</span>');
+        }
+        const classes = ['ability-entry'];
+        if (abilityName === focusedAbility) {
+          classes.push('active');
+        }
+        if (preparedSet.has(abilityName)) {
+          classes.push('prepared');
+        }
         return `
           <li>
-            <button type="button" class="ability-entry${activeClass}" data-ability-name="${abilityName}">
+            <div class="${classes.join(' ')}">
               <span class="ability-entry__name">${abilityName}</span>
-              <span class="ability-entry__meta">${usesLabel} • ${manaLabel}</span>
+              ${metaLabel ? `<span class="ability-entry__meta">${metaLabel}</span>` : ''}
               ${detailLine}
               ${description}
-              ${statusBadge}
-            </button>
+              ${badges.join('')}
+            </div>
           </li>
         `;
       })
@@ -1280,6 +1394,100 @@
 
   function renderCharacterScreen() {
     renderTalentPanel();
+  }
+
+  function renderCampScreen() {
+    if (!elements.campAbilityList || !elements.campPreparedList) return;
+    const player = state.player;
+    if (!player) {
+      elements.campPreparedList.innerHTML = '<li class="empty">Create a hero to prepare abilities.</li>';
+      elements.campAbilityList.innerHTML = '<li class="empty">No abilities learned yet.</li>';
+      if (elements.campAbilitySlots) {
+        elements.campAbilitySlots.textContent = `${DEFAULT_PREPARED_ABILITY_SLOTS}`;
+      }
+      if (elements.campCurrentDay) {
+        elements.campCurrentDay.textContent = '-';
+      }
+      if (elements.campSuppliesTotal) {
+        elements.campSuppliesTotal.textContent = '0';
+      }
+      if (elements.campEndDayButton) {
+        elements.campEndDayButton.disabled = true;
+      }
+      renderFeedback('camp');
+      renderFeedback('campRest');
+      return;
+    }
+    ensureAbilityState(player);
+    ensurePreparedAbilities(player);
+    sanitizeSelectedAbility();
+    const prepared = getPreparedAbilities();
+    const abilitySlotCount = getAbilitySlotCount(player);
+    if (elements.campAbilitySlots) {
+      elements.campAbilitySlots.textContent = `${abilitySlotCount}`;
+    }
+    const timeline = ensureTimeline(player);
+    if (elements.campCurrentDay) {
+      elements.campCurrentDay.textContent = `${timeline.day}`;
+    }
+    const supplies = getInventoryItemCount(player, CAMP_SUPPLIES_ITEM_ID);
+    if (elements.campSuppliesTotal) {
+      elements.campSuppliesTotal.textContent = `${supplies}`;
+    }
+    if (elements.campEndDayButton) {
+      elements.campEndDayButton.disabled = state.combat.active || supplies <= 0;
+    }
+    elements.campPreparedList.innerHTML = prepared.length
+      ? prepared
+          .map(
+            (abilityName, index) =>
+              `<li><strong>${abilityName}</strong><span>Slot ${index + 1}</span></li>`
+          )
+          .join('')
+      : '<li class="empty">No abilities prepared.</li>';
+    const abilityItems = (player.abilities || [])
+      .map((abilityName) => {
+        const definition = getAbilityDefinition(abilityName);
+        const summary = getAbilityDetailSummary(definition);
+        const description = definition?.description || '';
+        const manaCost = getAbilityManaCostForPlayer(player, definition);
+        const usesPerRest = definition?.usesPerRest;
+        const usesRemaining = getAbilityUsesRemaining(abilityName);
+        const metaParts = [];
+        if (Number.isFinite(manaCost)) {
+          metaParts.push(`${manaCost} mana`);
+        }
+        if (Number.isFinite(usesPerRest)) {
+          metaParts.push(`${usesRemaining}/${usesPerRest} uses`);
+        }
+        const meta = metaParts.join(' • ');
+        const preparedClass = prepared.includes(abilityName) ? ' selected' : '';
+        const checked = prepared.includes(abilityName) ? 'checked' : '';
+        const summaryLine = summary ? `<div class="camp-ability__details">${summary}</div>` : '';
+        const descriptionLine = description
+          ? `<div class="camp-ability__details">${description}</div>`
+          : '';
+        const metaLine = meta ? `<span class="camp-ability__meta">${meta}</span>` : '';
+        return `
+          <li class="camp-ability${preparedClass}">
+            <label class="camp-ability__toggle">
+              <input type="checkbox" data-camp-ability="${abilityName}" ${checked}>
+              <div class="camp-ability__content">
+                <div class="camp-ability__header">
+                  <span class="camp-ability__name">${abilityName}</span>
+                  ${metaLine}
+                </div>
+                ${summaryLine}
+                ${descriptionLine}
+              </div>
+            </label>
+          </li>
+        `;
+      })
+      .join('');
+    elements.campAbilityList.innerHTML = abilityItems || '<li class="empty">No abilities learned yet.</li>';
+    renderFeedback('camp');
+    renderFeedback('campRest');
   }
 
   function renderProfessionScreen() {
@@ -2417,6 +2625,236 @@
     `;
   }
 
+  function ensureCombatBuffState() {
+    if (!state.combat.playerBuffs || !Array.isArray(state.combat.playerBuffs)) {
+      state.combat.playerBuffs = [];
+    }
+    if (!state.combat.enemyBuffs || !Array.isArray(state.combat.enemyBuffs)) {
+      state.combat.enemyBuffs = [];
+    }
+  }
+
+  function clearCombatBuffs() {
+    ensureCombatBuffState();
+    state.combat.playerBuffs.length = 0;
+    state.combat.enemyBuffs.length = 0;
+  }
+
+  function getCombatBuffs(target) {
+    ensureCombatBuffState();
+    return target === 'enemy' ? state.combat.enemyBuffs : state.combat.playerBuffs;
+  }
+
+  function addCombatBuff(target, buff) {
+    if (!buff || typeof buff !== 'object') return;
+    ensureCombatBuffState();
+    const list = target === 'enemy' ? state.combat.enemyBuffs : state.combat.playerBuffs;
+    const entry = { ...buff };
+    if (entry.remainingTurns == null && Number.isFinite(entry.duration)) {
+      entry.remainingTurns = Math.max(0, Math.floor(entry.duration));
+    }
+    list.push(entry);
+  }
+
+  function getCombatStatBonus(stat) {
+    ensureCombatBuffState();
+    const normalized = (stat || '').toLowerCase();
+    return getCombatBuffs('player').reduce((sum, buff) => {
+      if ((buff.stat || '').toLowerCase() !== normalized) {
+        return sum;
+      }
+      const amount = Number.isFinite(buff.amount) ? buff.amount : 0;
+      return sum + amount;
+    }, 0);
+  }
+
+  function getPlayerCombatStat(stat) {
+    const player = state.player;
+    if (!player) return 0;
+    const base = getTotalStat(player, stat);
+    const bonus = getCombatStatBonus(stat);
+    return base + bonus;
+  }
+
+  function getPlayerCombatMaxHealth() {
+    const value = getPlayerCombatStat('health');
+    return Math.max(1, Math.round(Number.isFinite(value) ? value : 0));
+  }
+
+  function tickCombatBuffs(target) {
+    ensureCombatBuffState();
+    const list = getCombatBuffs(target);
+    for (let i = list.length - 1; i >= 0; i -= 1) {
+      const buff = list[i];
+      if (!Number.isFinite(buff.remainingTurns)) {
+        continue;
+      }
+      buff.remainingTurns -= 1;
+      if (buff.remainingTurns <= 0) {
+        list.splice(i, 1);
+      }
+    }
+  }
+
+  function calculateAbilityDamage(effect, player, enemy) {
+    const multiplier = Number.isFinite(effect?.multiplier) ? effect.multiplier : 1;
+    const bonus = Number.isFinite(effect?.bonus)
+      ? effect.bonus
+      : Number.isFinite(effect?.bonusDamage)
+      ? effect.bonusDamage
+      : 0;
+    const mitigation = Number.isFinite(effect?.defenseMitigation) ? effect.defenseMitigation : 0;
+    const minimum = Number.isFinite(effect?.minimum)
+      ? effect.minimum
+      : Number.isFinite(effect?.minimumDamage)
+      ? effect.minimumDamage
+      : 0;
+    const attackPower = calculatePlayerAttack();
+    const defense = enemy?.stats?.defense ?? 0;
+    const rawDamage = Math.round(attackPower * multiplier + bonus - defense * mitigation);
+    const damage = Math.max(minimum, rawDamage);
+    return Math.max(0, damage);
+  }
+
+  function calculateEnemyAbilityDamage(effect, enemy, playerDefense) {
+    const multiplier = Number.isFinite(effect?.multiplier) ? effect.multiplier : 1;
+    const bonus = Number.isFinite(effect?.bonus)
+      ? effect.bonus
+      : Number.isFinite(effect?.bonusDamage)
+      ? effect.bonusDamage
+      : 0;
+    const mitigation = Number.isFinite(effect?.defenseMitigation) ? effect.defenseMitigation : 0;
+    const minimum = Number.isFinite(effect?.minimum)
+      ? effect.minimum
+      : Number.isFinite(effect?.minimumDamage)
+      ? effect.minimumDamage
+      : 0;
+    const power = enemy?.stats?.power ?? 0;
+    const rawDamage = Math.round(power * multiplier + bonus - playerDefense * mitigation);
+    const damage = Math.max(minimum, rawDamage);
+    return Math.max(0, damage);
+  }
+
+  function applyCombatHeal(effect, player) {
+    if (!player) return 0;
+    const maxHealth = getPlayerCombatMaxHealth();
+    if (!(maxHealth > 0)) return 0;
+    const percent = Number.isFinite(effect?.percent) ? effect.percent : 0;
+    const flat = Number.isFinite(effect?.amount) ? effect.amount : 0;
+    const healAmount = Math.max(0, Math.round(maxHealth * percent + flat));
+    if (healAmount <= 0) return 0;
+    const current = Number.isFinite(state.combat.playerHealth) ? state.combat.playerHealth : player.resources.health;
+    state.combat.playerHealth = clamp(current + healAmount, 0, maxHealth);
+    return healAmount;
+  }
+
+  function applyCombatResource(effect, player) {
+    if (!player) return 0;
+    const resource = (effect?.resource || 'mana').toLowerCase();
+    if (resource !== 'mana') return 0;
+    const maxMana = getTotalStat(player, 'mana');
+    const percent = Number.isFinite(effect?.percent) ? effect.percent : 0;
+    const flat = Number.isFinite(effect?.amount) ? effect.amount : 0;
+    const restored = Math.max(0, Math.round(maxMana * percent + flat));
+    if (restored <= 0) return 0;
+    const current = Number.isFinite(state.combat.playerMana) ? state.combat.playerMana : player.resources.mana;
+    state.combat.playerMana = clamp(current + restored, 0, maxMana);
+    return restored;
+  }
+
+  function applyEnemyHeal(effect, enemy) {
+    if (!enemy) return 0;
+    const maxHealth = Math.max(1, Math.round(enemy.stats?.health || 0));
+    const percent = Number.isFinite(effect?.percent) ? effect.percent : 0;
+    const flat = Number.isFinite(effect?.amount) ? effect.amount : 0;
+    const healAmount = Math.max(0, Math.round(maxHealth * percent + flat));
+    if (healAmount <= 0) return 0;
+    const current = Number.isFinite(state.combat.enemyHealth) ? state.combat.enemyHealth : maxHealth;
+    state.combat.enemyHealth = clamp(current + healAmount, 0, maxHealth);
+    return healAmount;
+  }
+
+  function applyCombatBuff(effect, abilityName) {
+    const amount = Number.isFinite(effect?.amount) ? Math.round(effect.amount) : 0;
+    if (!amount) return null;
+    const stat = effect.stat || 'attack';
+    const duration = Number.isFinite(effect.duration) ? Math.max(0, Math.floor(effect.duration)) : null;
+    addCombatBuff('player', {
+      stat,
+      amount,
+      remainingTurns: duration,
+      source: abilityName
+    });
+    const statLabel = formatCombatStatLabel(stat);
+    if (duration && duration > 0) {
+      return `${statLabel} ${amount > 0 ? '+' : ''}${amount} for ${duration} turn${duration === 1 ? '' : 's'}.`;
+    }
+    return `${statLabel} ${amount > 0 ? '+' : ''}${amount} for this battle.`;
+  }
+
+  function resolvePlayerAbility(abilityName, abilityDefinition, player, enemy) {
+    const effects = getAbilityEffects(abilityDefinition);
+    if (!effects.length) {
+      return {
+        damage: 0,
+        messages: [{ message: `You channel ${abilityName}.`, type: logTypes.INFO }]
+      };
+    }
+    ensureCombatBuffState();
+    let totalDamage = 0;
+    let totalHeal = 0;
+    let totalMana = 0;
+    const buffMessages = [];
+    effects.forEach((effect) => {
+      if (!effect || typeof effect !== 'object') return;
+      if (effect.type === 'damage' || (!effect.type && (effect.multiplier != null || effect.bonus != null))) {
+        const damage = calculateAbilityDamage(effect, player, enemy);
+        if (damage > 0) {
+          totalDamage += damage;
+          state.combat.enemyHealth -= damage;
+        }
+        return;
+      }
+      if (effect.type === 'heal') {
+        const healed = applyCombatHeal(effect, player);
+        if (healed > 0) {
+          totalHeal += healed;
+        }
+        return;
+      }
+      if (effect.type === 'resource') {
+        const restored = applyCombatResource(effect, player);
+        if (restored > 0) {
+          totalMana += restored;
+        }
+        return;
+      }
+      if (effect.type === 'buff') {
+        const summary = applyCombatBuff(effect, abilityName);
+        if (summary) {
+          buffMessages.push(summary);
+        }
+      }
+    });
+    state.combat.enemyHealth = Math.max(0, state.combat.enemyHealth);
+    const messages = [];
+    if (totalDamage > 0) {
+      messages.push({ message: `You unleash ${abilityName}, dealing ${totalDamage} damage!`, type: logTypes.SUCCESS });
+    } else {
+      messages.push({ message: `You channel ${abilityName}.`, type: logTypes.INFO });
+    }
+    if (totalHeal > 0) {
+      messages.push({ message: `You recover ${totalHeal} health.`, type: logTypes.SUCCESS });
+    }
+    if (totalMana > 0) {
+      messages.push({ message: `You regain ${totalMana} mana.`, type: logTypes.INFO });
+    }
+    buffMessages.forEach((summary) => {
+      messages.push({ message: summary, type: logTypes.INFO });
+    });
+    return { damage: totalDamage, messages };
+  }
+
   function enterCombat(enemyId, context = null) {
     const player = state.player;
     const enemy = getEnemy(enemyId);
@@ -2434,6 +2872,7 @@
     state.combat.playerMana = player.resources.mana;
     state.combat.guard = false;
     state.combat.log = [];
+    clearCombatBuffs();
     state.combat.initiative = createCombatInitiative(player, enemy);
     addCombatLog(`You engage the ${enemy.name}.`, logTypes.INFO, true);
     openCombatScreen();
@@ -2445,89 +2884,248 @@
 
   function renderCombatState() {
     if (!elements.combatActions) return;
-    const inCombat = state.combat.active;
-    elements.combatActions.classList.toggle('active', inCombat);
     const player = state.player;
-    const enemy = getEnemy(state.combat.enemyId);
     if (player) {
       ensureAbilityState(player);
     }
-    if (elements.combatAbilityButton) {
-      const abilityName = getActiveAbilityName();
-      const abilityDefinition = abilityName ? getAbilityDefinition(abilityName) : null;
-      const usesRemaining = abilityName ? getAbilityUsesRemaining(abilityName) : Infinity;
-      const usesText = abilityDefinition && Number.isFinite(abilityDefinition.usesPerRest)
-        ? ` (${usesRemaining}/${abilityDefinition.usesPerRest})`
-        : '';
-      elements.combatAbilityButton.textContent = abilityName
-        ? `Use ${abilityName}${usesText}`
-        : 'Use Ability';
-    }
+    sanitizeSelectedAbility();
+    renderCombatAbilityButtons();
+    const enemy = getEnemy(state.combat.enemyId);
+    const inCombat = Boolean(state.combat.active && player && enemy);
+    elements.combatActions.classList.toggle('active', inCombat);
     if (elements.combatCurrentZone) {
       const zone = getCurrentZone();
       elements.combatCurrentZone.textContent = zone?.name || 'Unknown';
     }
     renderEnemyDetails(state.combat.enemyId);
-    const playerButtons = [
-      elements.combatStrikeButton,
-      elements.combatAbilityButton,
-      elements.combatGuardButton,
-      elements.combatFleeButton
-    ];
+    const playerButtons = [elements.combatStrikeButton, elements.combatGuardButton, elements.combatFleeButton];
     playerButtons.forEach((button) => {
       if (!button) return;
       button.disabled = !inCombat || state.combat.turn !== 'player';
     });
-    if (!inCombat || !player || !enemy) {
-      elements.combatStatus.innerHTML = '<p>No combat is currently underway.</p>';
+    if (!inCombat) {
+      if (elements.combatStatus) {
+        elements.combatStatus.innerHTML = '<div class="combat-status__summary"><p>No combat is currently underway.</p></div>';
+      }
+      renderCombatPlayerPanel(player);
+      if (elements.combatEnemyPanel) {
+        elements.combatEnemyPanel.innerHTML = '<p>No enemy engaged.</p>';
+      }
       renderCombatLog();
       return;
     }
-    if (elements.combatAbilityButton) {
-      const abilityName = getActiveAbilityName();
-      const abilityDefinition = abilityName ? getAbilityDefinition(abilityName) : null;
-      if (!abilityName) {
-        elements.combatAbilityButton.disabled = true;
-      } else if (
-        abilityDefinition &&
-        Number.isFinite(abilityDefinition.usesPerRest) &&
-        getAbilityUsesRemaining(abilityName) <= 0
-      ) {
-        elements.combatAbilityButton.disabled = true;
-      }
-      if (abilityDefinition) {
-        const manaCost = getAbilityManaCostForPlayer(player, abilityDefinition);
-        if (state.combat.playerMana < manaCost) {
-          elements.combatAbilityButton.disabled = true;
-        }
-      }
-    }
-    const playerMaxHealth = getTotalStat(player, 'health');
-    const playerMaxMana = getTotalStat(player, 'mana');
-    const enemyMaxHealth = enemy.stats.health;
-    const initiative = state.combat.initiative;
-    const threshold = initiative?.threshold || 100;
-    const playerMeter = clamp(initiative?.player?.meter ?? 0, 0, threshold);
-    const enemyMeter = clamp(initiative?.enemy?.meter ?? 0, 0, threshold);
-    const playerReadiness = Math.round((playerMeter / threshold) * 100);
-    const enemyReadiness = Math.round((enemyMeter / threshold) * 100);
-    const playerSpeed = Math.round(initiative?.player?.speed ?? getPlayerSpeed(player));
-    const enemySpeed = Math.round(initiative?.enemy?.speed ?? getEnemySpeed(enemy));
-    const turnDescription = !state.combat.turn
-      ? 'Rebalancing initiative...'
-      : state.combat.turn === 'player'
-      ? 'Your move'
-      : `${enemy.name} is poised to act`;
-    elements.combatStatus.innerHTML = `
-      <p><strong>${player.name}</strong>: ${Math.round(state.combat.playerHealth)} / ${Math.round(playerMaxHealth)} HP</p>
-      <p><strong>Mana:</strong> ${Math.round(state.combat.playerMana)} / ${Math.round(playerMaxMana)}</p>
-      <p><strong>${enemy.name}</strong>: ${Math.max(0, Math.round(state.combat.enemyHealth))} / ${Math.round(enemyMaxHealth)} HP</p>
-      <p><strong>Speed:</strong> You ${playerSpeed}, ${enemy.name} ${enemySpeed}</p>
-      <p><strong>Readiness:</strong> You ${playerReadiness}%, ${enemy.name} ${enemyReadiness}%</p>
-      <p><strong>Next Action:</strong> ${turnDescription}</p>
-    `;
+    ensureCombatBuffState();
+    renderCombatPlayerPanel(player);
+    renderCombatEnemyPanel(enemy);
+    renderCombatStatus(player, enemy);
     renderCombatLog();
   }
+
+
+  function renderCombatAbilityButtons() {
+    if (!elements.combatAbilityList) return;
+    const container = elements.combatAbilityList;
+    const player = state.player;
+    if (!player) {
+      container.innerHTML = '<p class="empty">No abilities prepared.</p>';
+      return;
+    }
+    ensureAbilityState(player);
+    const prepared = getPreparedAbilities();
+    if (!prepared.length) {
+      container.innerHTML = '<p class="empty">No abilities prepared.</p>';
+      return;
+    }
+    const selected = state.selected.abilityName;
+    const inCombat = Boolean(state.combat.active);
+    const playerMana = Number.isFinite(state.combat.playerMana)
+      ? state.combat.playerMana
+      : player.resources.mana;
+    container.innerHTML = prepared
+      .map((abilityName) => {
+        const definition = getAbilityDefinition(abilityName);
+        const summary = getAbilityDetailSummary(definition);
+        const description = definition?.description || '';
+        const manaCost = getAbilityManaCostForPlayer(player, definition);
+        const usesPerRest = definition?.usesPerRest;
+        const usesRemaining = getAbilityUsesRemaining(abilityName);
+        const metaParts = [];
+        if (Number.isFinite(manaCost)) {
+          metaParts.push(`${manaCost} Mana`);
+        }
+        if (Number.isFinite(usesPerRest)) {
+          metaParts.push(`${usesRemaining}/${usesPerRest} Uses`);
+        }
+        const metaLine = metaParts.length
+          ? `<span class="ability-meta">${metaParts.join(' • ')}</span>`
+          : '';
+        const summaryLine = summary
+          ? `<span class="ability-description">${summary}</span>`
+          : '';
+        const descriptionLine = description
+          ? `<span class="ability-description">${description}</span>`
+          : '';
+        const isActive = abilityName === selected;
+        const classes = ['combat-ability-button'];
+        if (isActive) {
+          classes.push('active');
+        }
+        const cannotUse =
+          inCombat &&
+          state.combat.turn === 'player' &&
+          ((Number.isFinite(manaCost) && playerMana < manaCost) ||
+            (Number.isFinite(usesPerRest) && usesRemaining <= 0));
+        const disabled = cannotUse ? ' disabled' : '';
+        return `
+          <button type="button" class="${classes.join(' ')}" data-combat-ability="${abilityName}"${disabled}>
+            <span class="ability-name">${abilityName}</span>
+            ${metaLine}
+            ${summaryLine}
+            ${descriptionLine}
+          </button>
+        `;
+      })
+      .join('');
+  }
+
+  function renderCombatResourceBar(label, current, max, type) {
+    const safeMax = Math.max(1, Math.round(Number.isFinite(max) ? max : 0));
+    const safeCurrent = clamp(Math.round(Number.isFinite(current) ? current : 0), 0, safeMax);
+    const percent = clamp(safeCurrent / safeMax, 0, 1) * 100;
+    const fillClasses = ['resource-fill'];
+    if (type === 'mana') {
+      fillClasses.push('mana');
+    } else if (type === 'health') {
+      fillClasses.push('health');
+    }
+    return `
+      <div class="combat-actor__vital">
+        <span>${label}</span>
+        <div class="resource-bar">
+          <div class="${fillClasses.join(' ')}" style="width: ${percent}%;"></div>
+        </div>
+        <span>${safeCurrent} / ${safeMax}</span>
+      </div>
+    `;
+  }
+
+  function renderCombatEffects(target) {
+    ensureCombatBuffState();
+    const buffs = getCombatBuffs(target).filter((buff) => Number.isFinite(buff?.amount) && buff.amount !== 0);
+    if (!buffs.length) {
+      return '';
+    }
+    const chips = buffs
+      .map((buff) => {
+        const amount = Math.round(buff.amount);
+        const statLabel = formatCombatStatLabel(buff.stat);
+        const duration = Number.isFinite(buff.remainingTurns)
+          ? ` (${buff.remainingTurns} turn${buff.remainingTurns === 1 ? '' : 's'} remaining)`
+          : '';
+        return `<span class="combat-effect">${statLabel} ${amount > 0 ? '+' : ''}${amount}${duration}</span>`;
+      })
+      .join('');
+    return `<div class="combat-actor__effects">${chips}</div>`;
+  }
+
+  function renderCombatPlayerPanel(player) {
+    if (!elements.combatPlayerPanel) return;
+    if (!player) {
+      elements.combatPlayerPanel.innerHTML = '<p>No hero present.</p>';
+      return;
+    }
+    const maxHealth = getPlayerCombatMaxHealth();
+    const maxMana = Math.max(0, Math.round(getPlayerCombatStat('mana')));
+    const useCombatState = Boolean(state.combat.active);
+    const healthSource = useCombatState && Number.isFinite(state.combat.playerHealth)
+      ? state.combat.playerHealth
+      : player.resources.health;
+    const manaSource = useCombatState && Number.isFinite(state.combat.playerMana)
+      ? state.combat.playerMana
+      : player.resources.mana;
+    const health = clamp(Math.round(healthSource), 0, maxHealth);
+    const mana = clamp(Math.round(manaSource), 0, maxMana);
+    const effects = renderCombatEffects('player');
+    elements.combatPlayerPanel.innerHTML = `
+      <header class="combat-actor__header">
+        <span class="combat-actor__name">${player.name}</span>
+        <span class="combat-actor__meta">Level ${player.level}</span>
+      </header>
+      <div class="combat-actor__vitals">
+        ${renderCombatResourceBar('Health', health, maxHealth, 'health')}
+        ${renderCombatResourceBar('Mana', mana, maxMana, 'mana')}
+      </div>
+      ${effects}
+    `;
+  }
+
+  function renderCombatEnemyPanel(enemy) {
+    if (!elements.combatEnemyPanel) return;
+    if (!enemy) {
+      elements.combatEnemyPanel.innerHTML = '<p>No enemy engaged.</p>';
+      return;
+    }
+    const maxHealth = Math.max(1, Math.round(enemy.stats?.health || 0));
+    const useCombatState = Boolean(state.combat.active);
+    const healthSource = useCombatState && Number.isFinite(state.combat.enemyHealth)
+      ? state.combat.enemyHealth
+      : maxHealth;
+    const health = clamp(Math.round(healthSource), 0, maxHealth);
+    const effects = renderCombatEffects('enemy');
+    elements.combatEnemyPanel.innerHTML = `
+      <header class="combat-actor__header">
+        <span class="combat-actor__name">${enemy.name}</span>
+        <span class="combat-actor__meta">Level ${enemy.level}</span>
+      </header>
+      <div class="combat-actor__vitals">
+        ${renderCombatResourceBar('Health', health, maxHealth, 'health')}
+      </div>
+      ${effects}
+    `;
+  }
+
+  function renderCombatStatus(player, enemy) {
+    if (!elements.combatStatus) return;
+    if (!state.combat.active || !player || !enemy) {
+      elements.combatStatus.innerHTML = '<div class="combat-status__summary"><p>No combat is currently underway.</p></div>';
+      return;
+    }
+    const lines = [];
+    if (state.combat.turn === 'player') {
+      lines.push('Your move. Choose an action to press the attack.');
+    } else {
+      lines.push(`The ${enemy.name} is poised to act. Brace yourself.`);
+    }
+    if (state.combat.guard) {
+      lines.push('Guarding: incoming damage will be reduced.');
+    }
+    const activeAbility = getActiveAbilityName();
+    if (activeAbility) {
+      lines.push(`Prepared ability: ${activeAbility}`);
+    } else {
+      lines.push('No abilities prepared for this battle.');
+    }
+    const playerBuffs = getCombatBuffs('player');
+    if (playerBuffs.length) {
+      const buffSummary = playerBuffs
+        .map((buff) => {
+          const amount = Math.round(buff.amount || 0);
+          const statLabel = formatCombatStatLabel(buff.stat);
+          const duration = Number.isFinite(buff.remainingTurns)
+            ? ` (${buff.remainingTurns} turn${buff.remainingTurns === 1 ? '' : 's'} remaining)`
+            : '';
+          return `${statLabel} ${amount > 0 ? '+' : ''}${amount}${duration}`;
+        })
+        .join(', ');
+      lines.push(`Active effects: ${buffSummary}`);
+    }
+    elements.combatStatus.innerHTML = `
+      <div class="combat-status__summary">
+        ${lines.map((line) => `<p>${line}</p>`).join('')}
+      </div>
+    `;
+  }
+
 
   function addCombatLog(message, type = logTypes.INFO, alsoGlobal = false) {
     state.combat.log.push({ message, type });
@@ -2707,52 +3305,67 @@
     }
   }
 
-  function takeCombatAction(action) {
-    if (!state.combat.active || state.combat.turn !== 'player') return;
+  function takeCombatAction(action, abilityName = null) {
+    if (!state.combat.active || state.combat.turn !== 'player') {
+      if (action === 'ability') {
+        renderCombatState();
+      }
+      return;
+    }
     const enemy = getEnemy(state.combat.enemyId);
     const player = state.player;
     if (!enemy || !player) return;
+    ensureCombatBuffState();
     let actionPerformed = false;
     if (action === 'strike') {
+      const defense = enemy.stats?.defense ?? 0;
       const damage = Math.max(
         4,
-        Math.round(calculatePlayerAttack() * (0.85 + Math.random() * 0.3) - enemy.stats.defense)
+        Math.round(calculatePlayerAttack() * (0.85 + Math.random() * 0.3) - defense * 0.25)
       );
       state.combat.enemyHealth -= damage;
+      state.combat.enemyHealth = Math.max(0, state.combat.enemyHealth);
       addCombatLog(`You strike the ${enemy.name} for ${damage} damage.`, logTypes.SUCCESS);
       actionPerformed = true;
     } else if (action === 'ability') {
       ensureAbilityState(player);
-      const abilityName = getActiveAbilityName();
-      if (!abilityName) {
+      const prepared = getPreparedAbilities();
+      const abilityToUse = abilityName || getActiveAbilityName();
+      if (!abilityToUse || !prepared.includes(abilityToUse)) {
         addCombatLog('You have no special techniques prepared.', logTypes.WARNING);
         renderCombatState();
         return;
       }
-      const abilityDefinition = getAbilityDefinition(abilityName);
-      const manaCost = getAbilityManaCostForPlayer(player, abilityDefinition) ?? 15;
-      const usesRemaining = getAbilityUsesRemaining(abilityName);
-      if (Number.isFinite(abilityDefinition?.usesPerRest) && usesRemaining <= 0) {
-        addCombatLog(`You have no remaining uses of ${abilityName}. Rest to recover.`, logTypes.WARNING);
+      const abilityDefinition = getAbilityDefinition(abilityToUse);
+      if (!abilityDefinition) {
+        addCombatLog('That technique is unfamiliar and cannot be used.', logTypes.WARNING);
         renderCombatState();
         return;
       }
-      if (state.combat.playerMana < manaCost) {
-        addCombatLog('You need more mana to unleash a special ability.', logTypes.WARNING);
+      const manaCost = getAbilityManaCostForPlayer(player, abilityDefinition);
+      const usesRemaining = getAbilityUsesRemaining(abilityToUse);
+      if (Number.isFinite(abilityDefinition.usesPerRest) && usesRemaining <= 0) {
+        addCombatLog(`You have no remaining uses of ${abilityToUse}. Rest to recover.`, logTypes.WARNING);
         renderCombatState();
         return;
       }
-      state.combat.playerMana = Math.max(0, state.combat.playerMana - manaCost);
-      const multiplier = abilityDefinition?.damageMultiplier ?? 1.1;
-      const bonus = abilityDefinition?.bonusDamage ?? 8;
-      const mitigation = abilityDefinition?.defenseMitigation ?? 0.2;
-      const minimumDamage = abilityDefinition?.minimumDamage ?? 8;
-      const rawDamage = Math.round(calculatePlayerAttack() * multiplier + bonus - enemy.stats.defense * mitigation);
-      const damage = Math.max(minimumDamage, rawDamage);
-      state.combat.enemyHealth -= damage;
-      addCombatLog(`You channel ${abilityName}, dealing ${damage} damage!`, logTypes.SUCCESS);
-      if (Number.isFinite(abilityDefinition?.usesPerRest)) {
-        player.abilityUses[abilityName] = Math.max(0, usesRemaining - 1);
+      if (Number.isFinite(manaCost) && state.combat.playerMana < manaCost) {
+        addCombatLog('You need more mana to unleash that technique.', logTypes.WARNING);
+        renderCombatState();
+        return;
+      }
+      if (Number.isFinite(manaCost)) {
+        state.combat.playerMana = Math.max(0, state.combat.playerMana - manaCost);
+      }
+      const result = resolvePlayerAbility(abilityToUse, abilityDefinition, player, enemy);
+      state.combat.enemyHealth = Math.max(0, state.combat.enemyHealth);
+      (result.messages || []).forEach((entry) => {
+        if (!entry || typeof entry.message !== 'string') return;
+        const type = entry.type || logTypes.INFO;
+        addCombatLog(entry.message, type);
+      });
+      if (Number.isFinite(abilityDefinition.usesPerRest)) {
+        player.abilityUses[abilityToUse] = Math.max(0, usesRemaining - 1);
         scheduleSave();
       }
       actionPerformed = true;
@@ -2779,6 +3392,7 @@
       return;
     }
 
+    tickCombatBuffs('player');
     advanceInitiative();
     processAutomaticTurns();
   }
@@ -2788,10 +3402,11 @@
     const enemy = getEnemy(state.combat.enemyId);
     const player = state.player;
     if (!enemy || !player) return false;
-    const playerDefense = getTotalStat(player, 'armor');
+    ensureCombatBuffState();
+    const playerDefense = getPlayerCombatStat('armor');
     let damage = Math.max(
       3,
-      Math.round(enemy.stats.power * (0.85 + Math.random() * 0.3) - playerDefense * 0.4)
+      Math.round((enemy.stats?.power ?? 0) * (0.85 + Math.random() * 0.3) - playerDefense * 0.4)
     );
     if (state.combat.guard) {
       const modifiers = getTalentModifiers(player);
@@ -2806,16 +3421,79 @@
       finishCombat('defeat', enemy);
       return false;
     }
-    if (enemy.abilities?.length && Math.random() < 0.2) {
+
+    if (enemy.abilities?.length && Math.random() < 0.25) {
       const abilityName = sample(enemy.abilities);
-      const burst = Math.max(2, Math.round(enemy.stats.power * 0.6));
-      state.combat.playerHealth = Math.max(0, state.combat.playerHealth - burst);
-      addCombatLog(`The ${enemy.name} uses ${abilityName}, dealing ${burst} extra damage.`, logTypes.DANGER);
-      if (state.combat.playerHealth <= 0) {
-        finishCombat('defeat', enemy);
-        return false;
+      const definition = getAbilityDefinition(abilityName);
+      if (definition) {
+        const effects = getAbilityEffects(definition);
+        let abilityDamage = 0;
+        let healed = 0;
+        const buffMessages = [];
+        effects.forEach((effect) => {
+          if (!effect || typeof effect !== 'object') return;
+          if (effect.type === 'damage' || (!effect.type && effect.multiplier != null)) {
+            const dealt = calculateEnemyAbilityDamage(effect, enemy, playerDefense);
+            if (dealt > 0) {
+              abilityDamage += dealt;
+            }
+            return;
+          }
+          if (effect.type === 'heal') {
+            const restored = applyEnemyHeal(effect, enemy);
+            if (restored > 0) {
+              healed += restored;
+            }
+            return;
+          }
+          if (effect.type === 'buff') {
+            const amount = Number.isFinite(effect.amount) ? Math.round(effect.amount) : 0;
+            if (!amount) return;
+            const duration = Number.isFinite(effect.duration) ? Math.max(0, Math.floor(effect.duration)) : null;
+            addCombatBuff('enemy', {
+              stat: effect.stat || 'attack',
+              amount,
+              duration,
+              remainingTurns: duration,
+              source: abilityName
+            });
+            const label = formatCombatStatLabel(effect.stat);
+            if (amount) {
+              const summary = duration
+                ? `${label} ${amount > 0 ? '+' : ''}${amount} for ${duration} turn${duration === 1 ? '' : 's'}.`
+                : `${label} ${amount > 0 ? '+' : ''}${amount} for this battle.`;
+              buffMessages.push(summary);
+            }
+          }
+        });
+        if (abilityDamage > 0) {
+          state.combat.playerHealth = Math.max(0, state.combat.playerHealth - abilityDamage);
+          addCombatLog(`The ${enemy.name} uses ${abilityName}, dealing ${abilityDamage} damage.`, logTypes.DANGER);
+          if (state.combat.playerHealth <= 0) {
+            finishCombat('defeat', enemy);
+            return false;
+          }
+        } else {
+          addCombatLog(`The ${enemy.name} uses ${abilityName}.`, logTypes.WARNING);
+        }
+        if (healed > 0) {
+          addCombatLog(`The ${enemy.name} regains ${healed} health.`, logTypes.WARNING);
+        }
+        buffMessages.forEach((summary) => {
+          addCombatLog(`The ${enemy.name} surges with power: ${summary}`, logTypes.WARNING);
+        });
+      } else {
+        const burst = Math.max(2, Math.round((enemy.stats?.power ?? 0) * 0.6));
+        state.combat.playerHealth = Math.max(0, state.combat.playerHealth - burst);
+        addCombatLog(`The ${enemy.name} uses ${abilityName}, dealing ${burst} extra damage.`, logTypes.DANGER);
+        if (state.combat.playerHealth <= 0) {
+          finishCombat('defeat', enemy);
+          return false;
+        }
       }
     }
+
+    tickCombatBuffs('enemy');
     return true;
   }
 
@@ -2835,6 +3513,7 @@
       addCombatLog(`You flee from the ${enemy.name}.`, logTypes.WARNING);
       addLog(`You flee from the ${enemy.name} and escape the encounter.`, logTypes.WARNING);
     }
+    clearCombatBuffs();
     state.combat.active = false;
     state.combat.turn = null;
     state.combat.enemyHealth = 0;
@@ -2977,16 +3656,17 @@
   function calculatePlayerAttack() {
     const player = state.player;
     if (!player) return 0;
-    const strength = getTotalStat(player, 'strength');
-    const agility = getTotalStat(player, 'agility');
-    const intellect = getTotalStat(player, 'intellect');
+    const strength = getPlayerCombatStat('strength');
+    const agility = getPlayerCombatStat('agility');
+    const intellect = getPlayerCombatStat('intellect');
     const base = strength + agility * 0.5 + intellect * 0.3;
     const equipmentBonus = ['weapon', 'offHand', 'trinket']
       .map((slot) => getItem(player.equipment[slot]))
       .filter(Boolean)
       .reduce((sum, item) => sum + (item.stats?.attack || item.stats?.spellPower || 0), 0);
     const modifiers = getTalentModifiers(player);
-    let total = base + equipmentBonus + player.level * 1.5;
+    const combatBonus = getCombatStatBonus('attack');
+    let total = base + equipmentBonus + player.level * 1.5 + combatBonus;
     total += modifiers.attackBonusFlat || 0;
     if (modifiers.attackMultiplier) {
       total *= 1 + modifiers.attackMultiplier;
@@ -4175,10 +4855,16 @@
 
   function restAtCamp() {
     if (!state.player) return;
-    if (!ensureCanAct('rest')) return;
+    if (!ensureCanAct('rest')) {
+      setFeedback('campRest', 'You cannot rest while engaged in combat!', logTypes.WARNING);
+      renderCampScreen();
+      return;
+    }
     const supplies = getInventoryItemCount(state.player, CAMP_SUPPLIES_ITEM_ID);
     if (supplies <= 0) {
       addLog('You need Camp Supplies to set up a proper camp.', logTypes.WARNING);
+      setFeedback('campRest', 'You need Camp Supplies to set up a proper camp.', logTypes.WARNING);
+      renderCampScreen();
       return;
     }
     removeItem(state.player, CAMP_SUPPLIES_ITEM_ID, 1);
@@ -4192,6 +4878,7 @@
     timeline.day += 1;
     addLog('You rest at camp, recovering your strength.', logTypes.INFO);
     addLog(`Day ${timeline.day} dawns as you break camp.`, logTypes.SUCCESS);
+    setFeedback('campRest', `Day ${timeline.day} dawns as you break camp, restored and ready.`, logTypes.SUCCESS);
     if (state.travel.dungeon) {
       if (state.travel.dungeon.optionUsed) {
         state.travel.dungeon = null;
@@ -4202,6 +4889,7 @@
     }
     renderInventory();
     updatePlayerPanel();
+    renderCampScreen();
     scheduleSave();
   }
 
@@ -4365,29 +5053,29 @@
     const player = state.player;
     if (!player) return null;
     ensureAbilityState(player);
-    const abilities = player.abilities || [];
-    if (!abilities.length) return null;
+    const prepared = getPreparedAbilities();
+    if (!prepared.length) return null;
     const selected = state.selected.abilityName;
-    if (selected && abilities.includes(selected)) {
+    if (selected && prepared.includes(selected)) {
       return selected;
     }
-    return abilities[0];
+    return prepared[0];
   }
 
   function sanitizeSelectedAbility() {
     const player = state.player;
     if (!player) return;
     ensureAbilityState(player);
-    const abilities = player.abilities || [];
+    const prepared = getPreparedAbilities();
     const selected = state.selected.abilityName;
-    if (!abilities.length) {
+    if (!prepared.length) {
       if (selected) {
         setTrackedState(state.selected, 'abilityName', null);
       }
       return;
     }
-    if (!selected || !abilities.includes(selected)) {
-      setTrackedState(state.selected, 'abilityName', abilities[0]);
+    if (!selected || !prepared.includes(selected)) {
+      setTrackedState(state.selected, 'abilityName', prepared[0]);
     }
   }
 
@@ -4451,6 +5139,95 @@
         player.abilityUses[abilityName] = definition.usesPerRest;
       }
     });
+    ensurePreparedAbilities(player);
+  }
+
+  function getAbilitySlotCount(player) {
+    if (!player) return DEFAULT_PREPARED_ABILITY_SLOTS;
+    const slots = Number.isFinite(player.abilitySlots)
+      ? Math.max(1, Math.floor(player.abilitySlots))
+      : DEFAULT_PREPARED_ABILITY_SLOTS;
+    player.abilitySlots = slots;
+    return slots;
+  }
+
+  function ensurePreparedAbilities(player) {
+    if (!player) return;
+    if (!Array.isArray(player.preparedAbilities)) {
+      player.preparedAbilities = [];
+    }
+    const abilitySlots = getAbilitySlotCount(player);
+    const knownAbilities = Array.isArray(player.abilities) ? player.abilities : [];
+    const knownSet = new Set(knownAbilities);
+    player.preparedAbilities = player.preparedAbilities
+      .filter((abilityName) => knownSet.has(abilityName))
+      .slice(0, abilitySlots);
+    knownAbilities.forEach((abilityName) => {
+      if (player.preparedAbilities.length >= abilitySlots) return;
+      if (!player.preparedAbilities.includes(abilityName)) {
+        player.preparedAbilities.push(abilityName);
+      }
+    });
+    if (!player.preparedAbilities.length && knownAbilities.length) {
+      player.preparedAbilities.push(knownAbilities[0]);
+    }
+  }
+
+  function getPreparedAbilities() {
+    const player = state.player;
+    if (!player) return [];
+    ensureAbilityState(player);
+    return Array.isArray(player.preparedAbilities) ? [...player.preparedAbilities] : [];
+  }
+
+  function handleCampAbilityToggle(abilityName, shouldPrepare) {
+    const player = state.player;
+    if (!player || !abilityName) {
+      renderCampScreen();
+      return;
+    }
+    ensureAbilityState(player);
+    const prepared = player.preparedAbilities || [];
+    const limit = getAbilitySlotCount(player);
+    let changed = false;
+    if (shouldPrepare) {
+      if (!player.abilities.includes(abilityName)) {
+        renderCampScreen();
+        return;
+      }
+      if (prepared.includes(abilityName)) {
+        renderCampScreen();
+        return;
+      }
+      if (prepared.length >= limit) {
+        setFeedback('camp', `You can only prepare ${limit} abilities.`, logTypes.WARNING);
+        renderCampScreen();
+        return;
+      }
+      prepared.push(abilityName);
+      setFeedback('camp', `${abilityName} prepared for combat.`, logTypes.SUCCESS);
+      changed = true;
+    } else {
+      if (!prepared.includes(abilityName)) {
+        renderCampScreen();
+        return;
+      }
+      if (prepared.length <= 1) {
+        setFeedback('camp', 'You must keep at least one ability prepared.', logTypes.WARNING);
+        renderCampScreen();
+        return;
+      }
+      player.preparedAbilities = prepared.filter((name) => name !== abilityName);
+      setFeedback('camp', `${abilityName} removed from your prepared list.`, logTypes.INFO);
+      changed = true;
+    }
+    if (changed) {
+      sanitizeSelectedAbility();
+      scheduleSave();
+    }
+    renderCampScreen();
+    renderPlayerAbilities();
+    renderCombatState();
   }
 
   function resetAbilityUses(player) {
@@ -4699,6 +5476,7 @@
       .filter(Boolean);
     ensureTimeline(player);
     ensureAbilityState(player);
+    getAbilitySlotCount(player);
     ensureTalentState(player);
   }
 
@@ -4869,7 +5647,9 @@
       profession: null,
       trade: null,
       town: null,
-      talent: null
+      talent: null,
+      camp: null,
+      campRest: null
     };
   }
 
