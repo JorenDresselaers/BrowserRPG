@@ -1576,3 +1576,184 @@ textarea:focus {
     max-height: 50vh;
   }
 }
+
+.sidebar-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.sidebar-card h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.sidebar-card p {
+  margin: 0.6rem 0 0;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.sidebar-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.text-button {
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(96, 165, 250, 0.12);
+  color: var(--info);
+  font-size: 0.75rem;
+}
+
+.quest-tracker__content strong {
+  display: block;
+  margin-top: 0.6rem;
+}
+
+.mini-progress {
+  height: 8px;
+  margin-top: 0.75rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.22);
+}
+
+.mini-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--success));
+}
+
+.focus-help {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.inventory-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.inventory-usage {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.inventory-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.inventory-filters button {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.inventory-filters button.active {
+  background: linear-gradient(120deg, rgba(255, 184, 108, 0.35), rgba(96, 165, 250, 0.25));
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.battle-banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.8rem;
+  align-items: center;
+  padding: 1rem 1.15rem;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 127, 80, 0.28), rgba(96, 165, 250, 0.16));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.25);
+}
+
+.battle-banner strong {
+  grid-row: span 2;
+  color: var(--accent);
+  font-size: 1.2rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.battle-banner span {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.combat-reward-card {
+  padding: 1rem 1.15rem;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.18), rgba(255, 179, 71, 0.18));
+  border: 1px solid rgba(74, 222, 128, 0.35);
+}
+
+.combat-reward-card h3 {
+  margin: 0 0 0.35rem;
+  color: var(--success);
+  font-size: 1.25rem;
+}
+
+.combat-reward-card p {
+  margin: 0.25rem 0 0.75rem;
+}
+
+.reward-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+}
+
+.reward-metrics div {
+  padding: 0.65rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.reward-metrics dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.reward-metrics dd {
+  margin: 0.25rem 0 0;
+  font-weight: 700;
+}
+
+.reward-level {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.combat-continue {
+  width: fit-content;
+  justify-self: start;
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.32), rgba(255, 179, 71, 0.22));
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(96, 165, 250, 0.75);
+  outline-offset: 2px;
+}
