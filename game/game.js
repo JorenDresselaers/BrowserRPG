@@ -3,7 +3,6 @@
     classes: './data/classes.json',
     enemies: './data/enemies.json',
     zones: './data/zones.json',
-    dungeons: './data/dungeons.json',
     landmarks: './data/landmarks.json',
     npcs: './data/npcs.json',
     items: './data/items.json',
@@ -177,7 +176,8 @@
       merchantId: null,
       professionId: null,
       recipeId: null,
-      abilityName: null
+      abilityName: null,
+      inventoryFilter: 'all'
     },
     combat: createDefaultCombatState(),
     travel: createDefaultTravelState(),
@@ -203,6 +203,9 @@
     playerGold: document.getElementById('playerGold'),
     adventureDay: document.getElementById('adventureDay'),
     campSupplies: document.getElementById('campSuppliesValue'),
+    nextActionHint: document.getElementById('nextActionHint'),
+    questTrackerContent: document.getElementById('questTrackerContent'),
+    questTrackerButton: document.getElementById('questTrackerButton'),
     campAbilityList: document.getElementById('campAbilityList'),
     campPreparedList: document.getElementById('campPreparedList'),
     campAbilitySlots: document.getElementById('campAbilitySlots'),
@@ -236,6 +239,7 @@
     travelDestinationHighlights: document.getElementById('travelDestinationHighlights'),
     travelDestinationThreats: document.getElementById('travelDestinationThreats'),
     travelFocusOptions: document.getElementById('travelFocusOptions'),
+    travelFocusHelp: document.getElementById('travelFocusHelp'),
     beginTravelButton: document.getElementById('beginTravelButton'),
     travelAdvanceButton: document.getElementById('travelAdvanceButton'),
     cancelTravelButton: document.getElementById('cancelTravelButton'),
@@ -260,6 +264,9 @@
     combatEnemyPanel: document.getElementById('combatEnemyPanel'),
     combatStatus: document.getElementById('combatStatus'),
     combatLog: document.getElementById('combatLog'),
+    combatBattleBanner: document.getElementById('combatBattleBanner'),
+    combatRewardSummary: document.getElementById('combatRewardSummary'),
+    combatContinueButton: document.getElementById('combatContinueButton'),
     npcSelect: document.getElementById('npcSelect'),
     npcDetails: document.getElementById('npcDetails'),
     townFeedback: document.getElementById('townFeedback'),
@@ -281,6 +288,8 @@
     gatherButton: document.getElementById('gatherButton'),
     craftButton: document.getElementById('craftButton'),
     recipeSelect: document.getElementById('recipeSelect'),
+    inventoryUsage: document.getElementById('inventoryUsage'),
+    inventoryFilters: document.getElementById('inventoryFilters'),
     inventoryItemTemplate: document.getElementById('inventoryItemTemplate'),
     recipeTemplate: document.getElementById('recipeTemplate'),
     combatScreen: document.getElementById('combatScreen'),
@@ -315,6 +324,77 @@
     camp: 'Select abilities to prepare them for the next battle.',
     campRest: 'Camp is calm. Prepare your abilities before resting.'
   };
+
+
+  const travelFocusDetails = {
+    balanced: 'Balanced routes mix discoveries, supplies, helpful travelers, and danger.',
+    gathering: 'Gathering focus greatly increases resource finds while lowering combat risk.',
+    combat: 'Hunting focus invites more fights for faster XP, gold, and loot chances.'
+  };
+
+  const inventoryFilterLabels = {
+    all: 'All',
+    equipment: 'Gear',
+    consumable: 'Consumables',
+    material: 'Materials'
+  };
+
+  const quickActionLibrary = [
+    {
+      id: 'combat',
+      screen: 'travel',
+      isActive: () => Boolean(state.combat.active),
+      text: () => 'Win or escape the current battle before doing anything else.'
+    },
+    {
+      id: 'lowHealth',
+      screen: 'inventory',
+      isActive: () => {
+        const player = state.player;
+        return Boolean(player && player.resources.health <= getTotalStat(player, 'health') * 0.35 && getInventoryItemCount(player, 'healing_potion') > 0);
+      },
+      text: () => 'You are badly hurt. Open Inventory and use a healing potion before pressing on.'
+    },
+    {
+      id: 'spendTalent',
+      screen: 'character',
+      isActive: () => Boolean(state.player?.talents?.points > 0),
+      text: () => `Spend ${state.player.talents.points} talent point${state.player.talents.points === 1 ? '' : 's'} on the Character screen.`
+    },
+    {
+      id: 'journey',
+      screen: 'travel',
+      isActive: () => Boolean(state.travel.journey),
+      text: () => 'Advance your current journey to resolve the next road event.'
+    },
+    {
+      id: 'activeQuest',
+      screen: 'quests',
+      isActive: () => Boolean(getTrackedQuestEntry()),
+      text: () => {
+        const entry = getTrackedQuestEntry();
+        const objective = getNextQuestObjective(entry);
+        return objective ? `Quest goal: ${objective.description}` : `Review ${entry.quest.name} in the Quest Log.`;
+      }
+    },
+    {
+      id: 'rest',
+      screen: 'camp',
+      isActive: () => {
+        const player = state.player;
+        if (!player) return false;
+        const needsRest = player.resources.health < getTotalStat(player, 'health') || player.resources.mana < getTotalStat(player, 'mana');
+        return needsRest && getInventoryItemCount(player, CAMP_SUPPLIES_ITEM_ID) > 0;
+      },
+      text: () => 'Rest at Camp to recover health, mana, and limited-use abilities.'
+    },
+    {
+      id: 'travel',
+      screen: 'travel',
+      isActive: () => Boolean(state.player),
+      text: () => 'Choose a destination and Begin Journey to find battles, resources, and discoveries.'
+    }
+  ];
 
   const equipmentSlotMap = {
     weapon: 'weapon',
@@ -373,7 +453,6 @@
     dataIndex.classes = indexById(data.classes);
     dataIndex.enemies = indexById(data.enemies);
     dataIndex.zones = indexById(data.zones);
-    dataIndex.dungeons = indexById(data.dungeons);
     dataIndex.landmarks = indexById(data.landmarks || []);
     dataIndex.npcs = indexById(data.npcs);
     dataIndex.items = indexById(data.items);
@@ -445,6 +524,7 @@
     setupProfessionControls();
     setupCampControls();
     setupTalentControls();
+    setupQuickWinControls();
     const restored = restoreSavedGame();
     if (!restored) {
       elements.newGameModal.classList.remove('hidden');
@@ -453,6 +533,27 @@
       addLog(`Welcome back, ${state.player.name}!`, logTypes.SUCCESS);
     }
     renderLog();
+  }
+
+
+
+  function setupQuickWinControls() {
+    elements.questTrackerButton?.addEventListener('click', () => showScreen('quests'));
+    elements.combatContinueButton?.addEventListener('click', () => {
+      state.combat.rewardSummary = null;
+      closeCombatScreen();
+      renderCombatRewardSummary(null);
+      updateNavigationLocks();
+    });
+    elements.inventoryFilters?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-inventory-filter]');
+      if (!button) return;
+      const filter = button.dataset.inventoryFilter;
+      if (!inventoryFilterLabels[filter]) return;
+      state.selected.inventoryFilter = filter;
+      renderInventory();
+      scheduleSave();
+    });
   }
 
   function setupNewGameForm() {
@@ -876,6 +977,7 @@
     renderLog();
     renderCombatState();
     renderInventory();
+    renderGuidancePanel();
     scheduleSave();
   }
 
@@ -913,6 +1015,57 @@
     renderPlayerPassives();
     renderPlayerProfessions();
     renderPlayerEquipment();
+    renderGuidancePanel();
+  }
+
+  function renderGuidancePanel() {
+    renderNextActionHint();
+    renderQuestTracker();
+  }
+
+  function renderNextActionHint() {
+    if (!elements.nextActionHint) return;
+    if (!state.player) {
+      elements.nextActionHint.textContent = 'Create a hero to begin your legend.';
+      return;
+    }
+    const action = quickActionLibrary.find((entry) => entry.isActive());
+    elements.nextActionHint.textContent = action ? action.text() : 'Explore the realm and build your legend.';
+  }
+
+  function renderQuestTracker() {
+    if (!elements.questTrackerContent) return;
+    if (!state.player) {
+      elements.questTrackerContent.innerHTML = '<p>Create a hero to receive your first quest.</p>';
+      return;
+    }
+    const entry = getTrackedQuestEntry();
+    if (!entry) {
+      elements.questTrackerContent.innerHTML = '<p>No active quest. Talk to residents in town for new work.</p>';
+      return;
+    }
+    const objective = getNextQuestObjective(entry);
+    const completed = entry.objectives.filter((item) => item.completed).length;
+    const total = entry.objectives.length || 1;
+    const progressPercent = clamp(completed / total, 0, 1) * 100;
+    const objectiveText = objective
+      ? `${objective.description} (${objective.progress || 0}/${objective.count || 1})`
+      : 'Ready to turn in.';
+    elements.questTrackerContent.innerHTML = `
+      <strong>${entry.quest.name}</strong>
+      <p>${objectiveText}</p>
+      <div class="mini-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${completed}">
+        <span style="width: ${progressPercent}%"></span>
+      </div>
+    `;
+  }
+
+  function getTrackedQuestEntry() {
+    return state.player?.quests?.active?.[0] || null;
+  }
+
+  function getNextQuestObjective(entry) {
+    return entry?.objectives?.find((objective) => !objective.completed) || null;
   }
 
   function updateResourceBar(bar, label, current, max) {
@@ -920,6 +1073,10 @@
     const safeMax = max || 1;
     const percent = clamp(current / safeMax, 0, 1) * 100;
     bar.style.width = `${percent}%`;
+    bar.parentElement?.setAttribute('role', 'progressbar');
+    bar.parentElement?.setAttribute('aria-valuemin', '0');
+    bar.parentElement?.setAttribute('aria-valuemax', `${Math.round(safeMax)}`);
+    bar.parentElement?.setAttribute('aria-valuenow', `${Math.round(current)}`);
     label.textContent = `${Math.round(current)} / ${Math.round(safeMax)}`;
   }
 
@@ -1506,6 +1663,7 @@
     }
     renderTravelDestination();
     updateTravelFocusButtons();
+    renderTravelFocusHelp();
     renderTravelJourney();
     renderTravelEventLog();
     renderCurrentLandmarkPanel();
@@ -1687,6 +1845,11 @@
     Array.from(elements.travelFocusOptions.querySelectorAll('button[data-focus]')).forEach((button) => {
       button.classList.toggle('active', button.dataset.focus === state.travel.focus);
     });
+  }
+
+  function renderTravelFocusHelp() {
+    if (!elements.travelFocusHelp) return;
+    elements.travelFocusHelp.textContent = travelFocusDetails[state.travel.focus] || travelFocusDetails.balanced;
   }
 
   function getTravelDestination() {
@@ -2218,6 +2381,7 @@
     checkLevelUp();
     updatePlayerPanel();
     renderInventory();
+    renderGuidancePanel();
     scheduleSave();
     return { summary: summaryParts.length ? `(${summaryParts.join(', ')})` : '' };
   }
@@ -2478,129 +2642,6 @@
       return { type: 'discovery', pointOfInterest };
     }
     return { type: 'quiet' };
-  }
-
-  function renderExplorationScreen() {
-    const zone = getCurrentZone();
-    if (!zone) return;
-    elements.explorationCurrentZone.textContent = zone.name;
-    elements.explorationZoneDescription.textContent = zone.description;
-    elements.explorationZoneDetails.innerHTML = `
-      <li>Climate: ${zone.climate}</li>
-      <li>Level Range: ${zone.levelRange[0]} - ${zone.levelRange[1]}</li>
-    `;
-    elements.explorationPoints.innerHTML = (zone.pointsOfInterest || [])
-      .map((poi) => `<p>${poi}</p>`)
-      .join('') || '<p>No notable landmarks recorded.</p>';
-    elements.explorationNPCs.innerHTML = (zone.npcIds || [])
-      .map((npcId) => `<li>${getNpc(npcId)?.name || npcId}</li>`)
-      .join('') || '<li>No allies reported.</li>';
-    elements.explorationResources.innerHTML = (zone.gatherables || [])
-      .map((itemId) => `<li>${getItem(itemId)?.name || itemId}</li>`)
-      .join('') || '<li>No gatherable resources.</li>';
-  }
-
-  function exploreZone() {
-    if (!state.player) return;
-    if (!ensureCanAct('explore new areas')) return;
-    const zone = getCurrentZone();
-    if (!zone) return;
-    if (state.player.resources.health <= 0) {
-      addLog('You are too wounded to explore. Rest first.', logTypes.WARNING);
-      return;
-    }
-    const roll = Math.random();
-    if (roll < 0.45 && zone.enemyIds?.length) {
-      const enemyId = sample(zone.enemyIds);
-      addLog(`You encounter a ${getEnemy(enemyId).name}!`, logTypes.WARNING);
-      enterCombat(enemyId, { zoneId: zone.id });
-    } else if (roll < 0.7 && zone.gatherables?.length) {
-      const gatheredItem = sample(zone.gatherables);
-      const amount = Math.random() < 0.3 ? 2 : 1;
-      grantItem(state.player, gatheredItem, amount);
-      addLog(`You gather ${amount} ${getItem(gatheredItem).name}.`, logTypes.SUCCESS);
-      renderInventory();
-      updateQuestProgress('collect', gatheredItem, amount);
-    } else if (roll < 0.85 && zone.npcIds?.length) {
-      const npcId = sample(zone.npcIds);
-      addLog(`You come across ${getNpc(npcId).name}.`, logTypes.INFO);
-      setTrackedState(state.selected, 'npcId', npcId);
-      showScreen('npcs');
-    } else {
-      addLog('You discover ancient carvings detailing forgotten lore.', logTypes.INFO);
-    }
-  }
-
-  function scoutZone() {
-    if (!ensureCanAct('scout while in battle')) return;
-    const zone = getCurrentZone();
-    if (!zone) return;
-    const enemies = (zone.enemyIds || []).map((id) => getEnemy(id)?.name || id).join(', ');
-    const dungeonNames = (zone.dungeonIds || []).map((id) => getDungeon(id)?.name || id).join(', ');
-    addLog(
-      `Scouting report for ${zone.name}: Enemies [${enemies || 'Unknown'}], Dungeons [${dungeonNames || 'None'}].`,
-      logTypes.INFO
-    );
-  }
-
-  function renderDungeonScreen() {
-    const dungeons = populateDungeonSelect();
-    const dungeon = dungeons.find((entry) => entry.id === state.selected.dungeonId);
-    if (!dungeon) {
-      elements.dungeonDescription.textContent = 'No dungeons have been mapped in this region.';
-      elements.dungeonObjectives.innerHTML = '';
-      elements.dungeonEncounters.innerHTML = '';
-      elements.dungeonEffects.innerHTML = '';
-      elements.dungeonRewards.innerHTML = '';
-      return;
-    }
-    elements.dungeonDescription.textContent = dungeon.description;
-    elements.dungeonObjectives.innerHTML = (dungeon.objectives || [])
-      .map((objective) => `<li>${objective}</li>`)
-      .join('') || '<li>No recorded objectives.</li>';
-    elements.dungeonEncounters.innerHTML = (dungeon.encounterIds || [])
-      .map((enemyId) => `<li>${getEnemy(enemyId)?.name || enemyId}</li>`)
-      .join('') || '<li>No scouting data.</li>';
-    elements.dungeonEffects.innerHTML = (dungeon.environmentalEffects || [])
-      .map((effect) => `<li>${effect}</li>`)
-      .join('') || '<li>None.</li>';
-    elements.dungeonRewards.innerHTML = `
-      <li>Experience: ${dungeon.rewards?.xp ?? 0}</li>
-      <li>Gold: ${dungeon.rewards?.gold ?? 0}</li>
-      <li>Items: ${(dungeon.rewards?.items || []).map((id) => getItem(id)?.name || id).join(', ') || 'None'}</li>
-    `;
-  }
-  function populateDungeonSelect() {
-    const zone = getCurrentZone();
-    const dungeons = data.dungeons.filter((dungeon) => dungeon.zoneId === zone?.id);
-    if (!dungeons.length) {
-      elements.dungeonSelect.innerHTML = '<option>No dungeons discovered</option>';
-      setTrackedState(state.selected, 'dungeonId', null);
-      return [];
-    }
-    elements.dungeonSelect.innerHTML = dungeons
-      .map((dungeon) => `<option value=\"${dungeon.id}\">${dungeon.name}</option>`)
-      .join('');
-    if (!state.selected.dungeonId || !dungeons.some((d) => d.id === state.selected.dungeonId)) {
-      setTrackedState(state.selected, 'dungeonId', dungeons[0].id);
-    }
-    elements.dungeonSelect.value = state.selected.dungeonId;
-    return dungeons;
-  }
-
-  function startDungeonRun() {
-    if (!state.player) return;
-    const dungeon = getDungeon(state.selected.dungeonId);
-    if (!dungeon) {
-      addLog('There is no dungeon expedition available in this zone.', logTypes.INFO);
-      return;
-    }
-    if (!ensureCanAct('delve into a dungeon')) return;
-    addLog(`You delve into the ${dungeon.name}.`, logTypes.INFO);
-    const encounters = [...(dungeon.encounterIds || [])];
-    if (dungeon.bossId) encounters.push(dungeon.bossId);
-    const enemyId = sample(encounters);
-    enterCombat(enemyId, { dungeonId: dungeon.id, boss: enemyId === dungeon.bossId });
   }
 
   function renderEnemyDetails(enemyId) {
@@ -2871,9 +2912,11 @@
     state.combat.playerMana = player.resources.mana;
     state.combat.guard = false;
     state.combat.log = [];
+    state.combat.rewardSummary = null;
     clearCombatBuffs();
     state.combat.initiative = createCombatInitiative(player, enemy);
-    addCombatLog(`You engage the ${enemy.name}.`, logTypes.INFO, true);
+    state.combat.enemyIntent = rollEnemyIntent(enemy);
+    addCombatLog(`Battle on! You face the ${enemy.name}.`, logTypes.INFO, true);
     openCombatScreen();
     renderCombatState();
     updateNavigationLocks();
@@ -2889,6 +2932,8 @@
     }
     sanitizeSelectedAbility();
     renderCombatAbilityButtons();
+    renderCombatBattleBanner();
+    renderCombatRewardSummary(state.combat.rewardSummary);
     const enemy = getEnemy(state.combat.enemyId);
     const inCombat = Boolean(state.combat.active && player && enemy);
     elements.combatActions.classList.toggle('active', inCombat);
@@ -3027,6 +3072,70 @@
     return `<div class="combat-actor__effects">${chips}</div>`;
   }
 
+
+
+  function renderCombatBattleBanner() {
+    if (!elements.combatBattleBanner) return;
+    const enemy = getEnemy(state.combat.enemyId);
+    if (!state.combat.active || !enemy) {
+      elements.combatBattleBanner.innerHTML = '<strong>Battle Ready</strong><span>Adventure waits beyond the next encounter.</span>';
+      return;
+    }
+    const actorText = state.combat.turn === 'player' ? 'Hero turn' : `${enemy.name} turn`;
+    const intent = getEnemyIntentSummary(enemy);
+    elements.combatBattleBanner.innerHTML = `
+      <strong>Battle On!</strong>
+      <span>${actorText}</span>
+      <span>${intent}</span>
+    `;
+  }
+
+  function renderCombatRewardSummary(summary) {
+    if (!elements.combatRewardSummary) return;
+    if (!summary) {
+      elements.combatRewardSummary.classList.add('hidden');
+      elements.combatRewardSummary.innerHTML = '';
+      elements.combatContinueButton?.classList.add('hidden');
+      return;
+    }
+    const loot = summary.loot?.length
+      ? summary.loot.map((entry) => `<li>${entry.name} ×${entry.quantity}</li>`).join('')
+      : '<li>No loot dropped this time.</li>';
+    const levelLine = summary.levelUps?.length
+      ? `<p class="reward-level">Level up! You reached level ${summary.levelUps.at(-1)}.</p>`
+      : '';
+    elements.combatRewardSummary.classList.remove('hidden');
+    elements.combatRewardSummary.innerHTML = `
+      <h3>${summary.title}</h3>
+      <p>${summary.message}</p>
+      <dl class="reward-metrics">
+        <div><dt>XP</dt><dd>${summary.xp || 0}</dd></div>
+        <div><dt>Gold</dt><dd>${summary.gold || 0}</dd></div>
+      </dl>
+      ${levelLine}
+      <strong>Loot</strong>
+      <ul>${loot}</ul>
+    `;
+    elements.combatContinueButton?.classList.remove('hidden');
+  }
+
+  function getEnemyIntentSummary(enemy) {
+    if (!enemy) return 'No enemy engaged.';
+    const intent = state.combat.enemyIntent || rollEnemyIntent(enemy);
+    if (intent.type === 'ability') {
+      return `${enemy.name} prepares ${intent.abilityName}.`;
+    }
+    return `${enemy.name} is lining up a basic strike.`;
+  }
+
+  function rollEnemyIntent(enemy) {
+    const usableAbilities = (enemy?.abilities || []).filter(Boolean);
+    if (usableAbilities.length && Math.random() < 0.35) {
+      return { type: 'ability', abilityName: sample(usableAbilities) };
+    }
+    return { type: 'attack' };
+  }
+
   function renderCombatPlayerPanel(player) {
     if (!elements.combatPlayerPanel) return;
     if (!player) {
@@ -3092,8 +3201,9 @@
     const lines = [];
     if (state.combat.turn === 'player') {
       lines.push('Your move. Choose an action to press the attack.');
+      lines.push(`Enemy intent: ${getEnemyIntentSummary(enemy)}`);
     } else {
-      lines.push(`The ${enemy.name} is poised to act. Brace yourself.`);
+      lines.push(`The ${enemy.name} is acting now. Brace yourself.`);
     }
     if (state.combat.guard) {
       lines.push('Guarding: incoming damage will be reduced.');
@@ -3403,97 +3513,104 @@
     if (!enemy || !player) return false;
     ensureCombatBuffState();
     const playerDefense = getPlayerCombatStat('armor');
-    let damage = Math.max(
-      3,
-      Math.round((enemy.stats?.power ?? 0) * (0.85 + Math.random() * 0.3) - playerDefense * 0.4)
-    );
-    if (state.combat.guard) {
-      const modifiers = getTalentModifiers(player);
-      const guardReduction = clamp(0.5 + (modifiers.guardDamageReductionBonus || 0), 0, 0.95);
-      damage = Math.round(damage * (1 - guardReduction));
-      state.combat.guard = false;
-      addCombatLog('Your guard absorbs part of the blow.', logTypes.INFO);
+    const intent = state.combat.enemyIntent || rollEnemyIntent(enemy);
+
+    if (intent.type === 'ability') {
+      resolveEnemyAbility(enemy, player, intent.abilityName, playerDefense);
+    } else {
+      let damage = Math.max(
+        3,
+        Math.round((enemy.stats?.power ?? 0) * (0.85 + Math.random() * 0.3) - playerDefense * 0.4)
+      );
+      if (state.combat.guard) {
+        const modifiers = getTalentModifiers(player);
+        const guardReduction = clamp(0.5 + (modifiers.guardDamageReductionBonus || 0), 0, 0.95);
+        damage = Math.round(damage * (1 - guardReduction));
+        state.combat.guard = false;
+        addCombatLog('Your guard absorbs part of the blow.', logTypes.INFO);
+      }
+      state.combat.playerHealth = Math.max(0, state.combat.playerHealth - damage);
+      addCombatLog(`The ${enemy.name} hits you for ${damage} damage.`, logTypes.DANGER);
     }
-    state.combat.playerHealth = Math.max(0, state.combat.playerHealth - damage);
-    addCombatLog(`The ${enemy.name} hits you for ${damage} damage.`, logTypes.DANGER);
+
     if (state.combat.playerHealth <= 0) {
       finishCombat('defeat', enemy);
       return false;
     }
 
-    if (enemy.abilities?.length && Math.random() < 0.25) {
-      const abilityName = sample(enemy.abilities);
-      const definition = getAbilityDefinition(abilityName);
-      if (definition) {
-        const effects = getAbilityEffects(definition);
-        let abilityDamage = 0;
-        let healed = 0;
-        const buffMessages = [];
-        effects.forEach((effect) => {
-          if (!effect || typeof effect !== 'object') return;
-          if (effect.type === 'damage' || (!effect.type && effect.multiplier != null)) {
-            const dealt = calculateEnemyAbilityDamage(effect, enemy, playerDefense);
-            if (dealt > 0) {
-              abilityDamage += dealt;
-            }
-            return;
-          }
-          if (effect.type === 'heal') {
-            const restored = applyEnemyHeal(effect, enemy);
-            if (restored > 0) {
-              healed += restored;
-            }
-            return;
-          }
-          if (effect.type === 'buff') {
-            const amount = Number.isFinite(effect.amount) ? Math.round(effect.amount) : 0;
-            if (!amount) return;
-            const duration = Number.isFinite(effect.duration) ? Math.max(0, Math.floor(effect.duration)) : null;
-            addCombatBuff('enemy', {
-              stat: effect.stat || 'attack',
-              amount,
-              duration,
-              remainingTurns: duration,
-              source: abilityName
-            });
-            const label = formatCombatStatLabel(effect.stat);
-            if (amount) {
-              const summary = duration
-                ? `${label} ${amount > 0 ? '+' : ''}${amount} for ${duration} turn${duration === 1 ? '' : 's'}.`
-                : `${label} ${amount > 0 ? '+' : ''}${amount} for this battle.`;
-              buffMessages.push(summary);
-            }
-          }
-        });
-        if (abilityDamage > 0) {
-          state.combat.playerHealth = Math.max(0, state.combat.playerHealth - abilityDamage);
-          addCombatLog(`The ${enemy.name} uses ${abilityName}, dealing ${abilityDamage} damage.`, logTypes.DANGER);
-          if (state.combat.playerHealth <= 0) {
-            finishCombat('defeat', enemy);
-            return false;
-          }
-        } else {
-          addCombatLog(`The ${enemy.name} uses ${abilityName}.`, logTypes.WARNING);
-        }
-        if (healed > 0) {
-          addCombatLog(`The ${enemy.name} regains ${healed} health.`, logTypes.WARNING);
-        }
-        buffMessages.forEach((summary) => {
-          addCombatLog(`The ${enemy.name} surges with power: ${summary}`, logTypes.WARNING);
-        });
-      } else {
-        const burst = Math.max(2, Math.round((enemy.stats?.power ?? 0) * 0.6));
-        state.combat.playerHealth = Math.max(0, state.combat.playerHealth - burst);
-        addCombatLog(`The ${enemy.name} uses ${abilityName}, dealing ${burst} extra damage.`, logTypes.DANGER);
-        if (state.combat.playerHealth <= 0) {
-          finishCombat('defeat', enemy);
-          return false;
-        }
-      }
+    tickCombatBuffs('enemy');
+    if (state.combat.active) {
+      state.combat.enemyIntent = rollEnemyIntent(enemy);
+    }
+    return true;
+  }
+
+  function resolveEnemyAbility(enemy, player, abilityName, playerDefense) {
+    const definition = getAbilityDefinition(abilityName);
+    if (!definition) {
+      const burst = Math.max(2, Math.round((enemy.stats?.power ?? 0) * 0.75));
+      state.combat.playerHealth = Math.max(0, state.combat.playerHealth - burst);
+      addCombatLog(`The ${enemy.name} unleashes ${abilityName}, dealing ${burst} damage.`, logTypes.DANGER);
+      return;
     }
 
-    tickCombatBuffs('enemy');
-    return true;
+    const effects = getAbilityEffects(definition);
+    let abilityDamage = 0;
+    let healed = 0;
+    const buffMessages = [];
+    effects.forEach((effect) => {
+      if (!effect || typeof effect !== 'object') return;
+      if (effect.type === 'damage' || (!effect.type && effect.multiplier != null)) {
+        const dealt = calculateEnemyAbilityDamage(effect, enemy, playerDefense);
+        if (dealt > 0) {
+          abilityDamage += dealt;
+        }
+        return;
+      }
+      if (effect.type === 'heal') {
+        const restored = applyEnemyHeal(effect, enemy);
+        if (restored > 0) {
+          healed += restored;
+        }
+        return;
+      }
+      if (effect.type === 'buff') {
+        const amount = Number.isFinite(effect.amount) ? Math.round(effect.amount) : 0;
+        if (!amount) return;
+        const duration = Number.isFinite(effect.duration) ? Math.max(0, Math.floor(effect.duration)) : null;
+        addCombatBuff('enemy', {
+          stat: effect.stat || 'attack',
+          amount,
+          duration,
+          remainingTurns: duration,
+          source: abilityName
+        });
+        const label = formatCombatStatLabel(effect.stat);
+        buffMessages.push(duration
+          ? `${label} ${amount > 0 ? '+' : ''}${amount} for ${duration} turn${duration === 1 ? '' : 's'}.`
+          : `${label} ${amount > 0 ? '+' : ''}${amount} for this battle.`);
+      }
+    });
+
+    if (abilityDamage > 0) {
+      if (state.combat.guard) {
+        const modifiers = getTalentModifiers(player);
+        const guardReduction = clamp(0.35 + (modifiers.guardDamageReductionBonus || 0), 0, 0.85);
+        abilityDamage = Math.max(1, Math.round(abilityDamage * (1 - guardReduction)));
+        state.combat.guard = false;
+        addCombatLog('Your guard blunts the special attack.', logTypes.INFO);
+      }
+      state.combat.playerHealth = Math.max(0, state.combat.playerHealth - abilityDamage);
+      addCombatLog(`The ${enemy.name} uses ${abilityName}, dealing ${abilityDamage} damage.`, logTypes.DANGER);
+    } else {
+      addCombatLog(`The ${enemy.name} uses ${abilityName}.`, logTypes.WARNING);
+    }
+    if (healed > 0) {
+      addCombatLog(`The ${enemy.name} regains ${healed} health.`, logTypes.WARNING);
+    }
+    buffMessages.forEach((summary) => {
+      addCombatLog(`The ${enemy.name} surges with power: ${summary}`, logTypes.WARNING);
+    });
   }
 
   function finishCombat(outcome, enemy) {
@@ -3502,16 +3619,20 @@
     const context = state.combat.context;
     player.resources.health = clamp(Math.round(state.combat.playerHealth), 0, getTotalStat(player, 'health'));
     player.resources.mana = clamp(Math.round(state.combat.playerMana), 0, getTotalStat(player, 'mana'));
+    let rewardSummary = null;
     if (outcome === 'victory') {
       addCombatLog(`You defeat the ${enemy.name}!`, logTypes.SUCCESS);
-      handleCombatVictory(enemy, []);
+      rewardSummary = handleCombatVictory(enemy, []);
     } else if (outcome === 'defeat') {
       addCombatLog(`You fall in battle against the ${enemy.name}.`, logTypes.DANGER);
       handleCombatDefeat(enemy, []);
+      rewardSummary = createCombatOutcomeSummary('Defeat', `You were forced back by the ${enemy.name}. Rest, prepare, and try again.`, 0, 0, []);
     } else if (outcome === 'flee') {
       addCombatLog(`You flee from the ${enemy.name}.`, logTypes.WARNING);
       addLog(`You flee from the ${enemy.name} and escape the encounter.`, logTypes.WARNING);
+      rewardSummary = createCombatOutcomeSummary('Escaped', `You escaped the ${enemy.name}. No rewards gained.`, 0, 0, []);
     }
+    state.combat.rewardSummary = rewardSummary;
     clearCombatBuffs();
     state.combat.active = false;
     state.combat.turn = null;
@@ -3520,8 +3641,14 @@
     state.combat.context = null;
     state.combat.guard = false;
     state.combat.initiative = null;
-    closeCombatScreen();
+    state.combat.enemyIntent = null;
+    // Keep the AdventureQuest-inspired battle card open long enough to show rewards.
     renderCombatState();
+    if (state.combat.rewardSummary) {
+      openCombatScreen();
+    } else {
+      closeCombatScreen();
+    }
     updatePlayerPanel();
     renderInventory();
     updateQuestLogView();
@@ -3612,8 +3739,10 @@
   function handleCombatVictory(enemy, rounds) {
     rounds.forEach((line) => addLog(line, logTypes.INFO));
     addLog(`You defeat the ${enemy.name}!`, logTypes.SUCCESS);
+    const startingLevel = state.player.level;
     const xpGained = enemy.xp || 0;
     const goldGained = enemy.gold || 0;
+    const loot = [];
     state.player.xp += xpGained;
     state.player.gold += goldGained;
     addLog(`Rewards: ${xpGained} XP, ${goldGained} gold.`, logTypes.SUCCESS);
@@ -3621,15 +3750,29 @@
       if (Math.random() <= entry.chance) {
         const quantity = entry.quantity || 1;
         grantItem(state.player, entry.itemId, quantity);
-        addLog(`Loot acquired: ${getItem(entry.itemId).name} x${quantity}.`, logTypes.SUCCESS);
+        const itemName = getItem(entry.itemId)?.name || toTitle(entry.itemId);
+        loot.push({ name: itemName, quantity });
+        addLog(`Loot acquired: ${itemName} x${quantity}.`, logTypes.SUCCESS);
       }
     });
     updateQuestProgress('kill', enemy.id, 1);
     checkLevelUp();
-    const context = state.combat.context;
-    if (context?.dungeonId && context.boss) {
-      completeDungeon(context.dungeonId);
+    const levelUps = [];
+    for (let level = startingLevel + 1; level <= state.player.level; level += 1) {
+      levelUps.push(level);
     }
+    return createCombatOutcomeSummary(
+      'Victory!',
+      `You defeated the ${enemy.name}. Battle on to keep your streak alive!`,
+      xpGained,
+      goldGained,
+      loot,
+      levelUps
+    );
+  }
+
+  function createCombatOutcomeSummary(title, message, xp, gold, loot = [], levelUps = []) {
+    return { title, message, xp, gold, loot, levelUps };
   }
 
   function handleCombatDefeat(enemy, rounds) {
@@ -3639,17 +3782,6 @@
     state.player.gold -= lostGold;
     state.player.resources.health = Math.max(1, Math.round(getTotalStat(state.player, 'health') * 0.25));
     addLog(`You retreat to safety, losing ${lostGold} gold in the process.`, logTypes.WARNING);
-  }
-
-  function completeDungeon(dungeonId) {
-    const dungeon = getDungeon(dungeonId);
-    if (!dungeon) return;
-    addLog(`Dungeon cleared: ${dungeon.name}!`, logTypes.SUCCESS);
-    state.player.xp += dungeon.rewards?.xp || 0;
-    state.player.gold += dungeon.rewards?.gold || 0;
-    (dungeon.rewards?.items || []).forEach((itemId) => grantItem(state.player, itemId, 1));
-    updateQuestProgress('dungeon', dungeonId, 1);
-    checkLevelUp();
   }
 
   function calculatePlayerAttack() {
@@ -4268,9 +4400,24 @@
     if (!state.player) return;
     const inventory = ensurePlayerInventory(state.player);
     const totalSlots = Math.max(DEFAULT_INVENTORY_SLOT_COUNT, inventory.length);
+    const activeFilter = inventoryFilterLabels[state.selected.inventoryFilter] ? state.selected.inventoryFilter : 'all';
+    const usedSlots = inventory.filter(Boolean).length;
+    if (elements.inventoryUsage) {
+      elements.inventoryUsage.textContent = `${usedSlots} / ${totalSlots} slots used`;
+    }
+    updateInventoryFilterButtons(activeFilter);
     const fragment = document.createDocumentFragment();
+    let visibleCount = 0;
     for (let index = 0; index < totalSlots; index += 1) {
       const slot = index < inventory.length ? inventory[index] : null;
+      const slotItem = slot ? getItem(slot.itemId) : null;
+      if (!slot && activeFilter !== 'all') {
+        continue;
+      }
+      if (slot && !doesItemMatchInventoryFilter(slotItem, activeFilter)) {
+        continue;
+      }
+      visibleCount += 1;
       const template = elements.inventoryItemTemplate.content.cloneNode(true);
       const card = template.querySelector('.card');
       const header = template.querySelector('.card-header');
@@ -4295,7 +4442,7 @@
       }
 
       card.dataset.slotIndex = String(index);
-      const item = getItem(slot.itemId);
+      const item = slotItem;
       const itemName = item?.name || toTitle(slot.itemId || 'Unknown item');
       const title = document.createElement('span');
       title.className = 'item-name';
@@ -4373,7 +4520,26 @@
       fragment.appendChild(card);
     }
     elements.inventoryList.innerHTML = '';
+    if (!visibleCount) {
+      elements.inventoryList.innerHTML = `<p class="empty">No ${inventoryFilterLabels[activeFilter].toLowerCase()} items in your pack.</p>`;
+      return;
+    }
     elements.inventoryList.appendChild(fragment);
+  }
+
+  function updateInventoryFilterButtons(activeFilter) {
+    if (!elements.inventoryFilters) return;
+    Array.from(elements.inventoryFilters.querySelectorAll('[data-inventory-filter]')).forEach((button) => {
+      button.classList.toggle('active', button.dataset.inventoryFilter === activeFilter);
+    });
+  }
+
+  function doesItemMatchInventoryFilter(item, filter) {
+    if (!filter || filter === 'all') return true;
+    if (!item) return false;
+    if (filter === 'equipment') return Boolean(getEquipmentSlot(item));
+    if (filter === 'material') return ['material', 'quest', 'resource'].includes(item.type);
+    return item.type === filter;
   }
 
   function getEquipmentSlot(item) {
@@ -4625,6 +4791,7 @@
       }
     });
     updateQuestLogView();
+    renderGuidancePanel();
   }
 
   function completeQuest(entry) {
@@ -4929,10 +5096,6 @@
 
   function getZone(id) {
     return dataIndex.zones[id];
-  }
-
-  function getDungeon(id) {
-    return dataIndex.dungeons[id];
   }
 
   function getLandmark(id) {
@@ -5376,6 +5539,9 @@
     state.logs = Array.isArray(saved.logs) ? saved.logs.slice(-100) : [];
     state.logOverlayOpen = false;
     Object.assign(state.selected, saved.selected || {});
+    if (!inventoryFilterLabels[state.selected.inventoryFilter]) {
+      state.selected.inventoryFilter = 'all';
+    }
     const loadedTravel = saved.travel && typeof saved.travel === 'object' ? { ...saved.travel } : {};
     const legacyDestinationZoneId = loadedTravel.destinationZoneId;
     delete loadedTravel.destinationZoneId;
@@ -5663,7 +5829,9 @@
       playerMana: 0,
       guard: false,
       log: [],
-      initiative: null
+      initiative: null,
+      enemyIntent: null,
+      rewardSummary: null
     };
   }
 

@@ -24,7 +24,9 @@
     "rewards": {
       "xp": 150,
       "gold": 12,
-      "items": ["healing_potion"]
+      "items": [
+        "healing_potion"
+      ]
     }
   },
   {
@@ -52,7 +54,9 @@
     "rewards": {
       "xp": 260,
       "gold": 28,
-      "items": ["ember_staff"]
+      "items": [
+        "ember_staff"
+      ]
     }
   },
   {
@@ -63,11 +67,11 @@
     "description": "Archivist Mira needs detailed notes from within the Umbral Catacombs to stem the void's advance.",
     "objectives": [
       {
-        "id": "chart_catacombs",
-        "description": "Explore the Umbral Catacombs for rift anchors.",
-        "type": "dungeon",
-        "target": "umbral_catacombs",
-        "count": 1
+        "id": "disrupt_voidcallers",
+        "description": "Defeat Voidcallers anchoring the Umbral Hollow rifts.",
+        "type": "kill",
+        "target": "voidcaller",
+        "count": 2
       },
       {
         "id": "slay_revenant",
@@ -87,7 +91,10 @@
     "rewards": {
       "xp": 420,
       "gold": 62,
-      "items": ["shadow_daggers", "warden_insignia"]
+      "items": [
+        "shadow_daggers",
+        "warden_insignia"
+      ]
     }
   }
 ]

@@ -59,6 +59,19 @@
             <span class="value" id="campSuppliesValue">0</span>
           </div>
         </section>
+        <section class="sidebar-card guidance-card" aria-labelledby="guidanceTitle">
+          <h2 id="guidanceTitle">Next Best Move</h2>
+          <p id="nextActionHint">Create a hero to begin your legend.</p>
+        </section>
+        <section class="sidebar-card quest-tracker" aria-labelledby="questTrackerTitle">
+          <div class="sidebar-card__header">
+            <h2 id="questTrackerTitle">Tracked Quest</h2>
+            <button id="questTrackerButton" class="text-button" type="button">Open Log</button>
+          </div>
+          <div id="questTrackerContent" class="quest-tracker__content">
+            <p>No quest tracked yet.</p>
+          </div>
+        </section>
         <nav id="screenNav" class="sidebar-nav" aria-label="Game screens">
           <button class="active" data-screen="character" type="button">Character</button>
           <button data-screen="camp" type="button">Camp</button>
@@ -229,6 +242,7 @@
                   <button type="button" data-focus="gathering">Gathering</button>
                   <button type="button" data-focus="combat">Hunting</button>
                 </div>
+                <p id="travelFocusHelp" class="focus-help">Balanced routes mix discoveries, supplies, and danger.</p>
               </div>
               <div class="button-row">
                 <button id="beginTravelButton" type="button">Begin Journey</button>
@@ -354,6 +368,9 @@
       </header>
       <div class="combat-content">
         <section class="combat-overview">
+          <div id="combatBattleBanner" class="battle-banner" aria-live="polite"></div>
+          <div id="combatRewardSummary" class="combat-reward-card hidden" aria-live="polite"></div>
+          <button id="combatContinueButton" class="combat-continue hidden" type="button">Continue Adventure</button>
           <div class="combat-actors">
             <article id="combatPlayerPanel" class="combat-actor" aria-label="Hero status"></article>
             <article id="combatEnemyPanel" class="combat-actor" aria-label="Enemy status"></article>
@@ -403,12 +420,21 @@
     </div>
   </div>
 
-  <div id="inventoryPanel" class="overlay-panel" aria-hidden="true">
+  <div id="inventoryPanel" class="overlay-panel" role="dialog" aria-modal="true" aria-labelledby="inventoryTitle" aria-hidden="true">
     <div class="overlay-content">
       <header>
-        <h2>Inventory</h2>
+        <h2 id="inventoryTitle">Inventory</h2>
         <button class="close-button" type="button" data-close="inventoryPanel" aria-label="Close inventory">×</button>
       </header>
+      <div class="inventory-toolbar" aria-label="Inventory tools">
+        <span id="inventoryUsage" class="inventory-usage">0 / 24 slots used</span>
+        <div id="inventoryFilters" class="inventory-filters" role="group" aria-label="Inventory filters">
+          <button class="active" type="button" data-inventory-filter="all">All</button>
+          <button type="button" data-inventory-filter="equipment">Gear</button>
+          <button type="button" data-inventory-filter="consumable">Consumables</button>
+          <button type="button" data-inventory-filter="material">Materials</button>
+        </div>
+      </div>
       <div id="inventoryList" class="list-grid"></div>
     </div>
   </div>
